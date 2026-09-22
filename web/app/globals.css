@@ -1,0 +1,284 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * KOBY DESIGN TOKENS — Phase 1 foundation.
+ * Dual-mode (light/dark) with hierarchy parity. Restrained institutional
+ * palette: no neon, no gradients, no glassmorphism.
+ * Source: docs/DESIGN.md Sections 7–11.
+ */
+
+:root {
+  /* Structural — light */
+  --koby-bg: #f6f6f4;
+  --koby-bg-secondary: #ededea;
+  --koby-surface: #ffffff;
+  --koby-border: #e0e0d9;
+  --koby-border-strong: #c9c9bd;
+  --koby-text: #17181a;
+  --koby-text-secondary: #555b62;
+  --koby-text-muted: #7b8189;
+
+  /* Semantic — light */
+  --koby-accent: #0e4a3c;
+  --koby-accent-hover: #0a382d;
+  --koby-accent-text: #ffffff;
+  --koby-accent-subtle: #e2eee7;
+  --koby-success: #177245;
+  --koby-success-subtle: #e0f0e6;
+  --koby-warning: #8a5a00;
+  --koby-warning-subtle: #f7ecd2;
+  --koby-error: #b3261e;
+  --koby-error-subtle: #f9e3e1;
+  --koby-info: #3e5c76;
+  --koby-info-subtle: #e3ebf2;
+
+  /* Pending (submitted/confirming): third language, neither success nor failure */
+  --koby-pending: #7a5c00;
+  --koby-pending-subtle: #f5ecca;
+
+  /* AI tone: restrained analytical, distinct from success/error */
+  --koby-ai: #46586e;
+  --koby-ai-subtle: #e7edf3;
+
+  /* Demo/simulated: consistent labeled treatment, not warning/error colors */
+  --koby-demo-bg: #f1eee6;
+  --koby-demo-border: #a89f8d;
+  --koby-demo-text: #5f5747;
+
+  /* Geometry + layout (master redesign: 8/14/18 rhythm, 1152px measure) */
+  --koby-radius-sm: 8px;
+  --koby-radius-md: 14px;
+  --koby-radius-lg: 18px;
+  --koby-content-max: 72rem;
+
+  /* Motion */
+  --koby-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --koby-trans-fast: 0.2s;
+  --koby-trans-slow: 0.6s;
+
+  --koby-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --koby-font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+.dark {
+  /* Structural — dark */
+  --koby-bg: #0f1110;
+  --koby-bg-secondary: #161817;
+  --koby-surface: #1b1e1c;
+  --koby-border: #2b2f2c;
+  --koby-border-strong: #3c423d;
+  --koby-text: #eceee9;
+  --koby-text-secondary: #b4b8b0;
+  --koby-text-muted: #8c928a;
+
+  /* Semantic — dark */
+  --koby-accent: #63bd8f;
+  --koby-accent-hover: #7ccfa2;
+  --koby-accent-text: #0a2118;
+  --koby-accent-subtle: #152b22;
+  --koby-success: #4cc38a;
+  --koby-success-subtle: #14291e;
+  --koby-warning: #e0b45c;
+  --koby-warning-subtle: #2e2611;
+  --koby-error: #f0887f;
+  --koby-error-subtle: #331716;
+  --koby-info: #8fb4d9;
+  --koby-info-subtle: #1a2733;
+
+  --koby-pending: #d9b64a;
+  --koby-pending-subtle: #2c2510;
+
+  --koby-ai: #9fb3c8;
+  --koby-ai-subtle: #1d2630;
+
+  --koby-demo-bg: #211e17;
+  --koby-demo-border: #6b6455;
+  --koby-demo-text: #c9bfa9;
+}
+
+@theme inline {
+  --color-koby-bg: var(--koby-bg);
+  --color-koby-bg-secondary: var(--koby-bg-secondary);
+  --color-koby-surface: var(--koby-surface);
+  --color-koby-border: var(--koby-border);
+  --color-koby-border-strong: var(--koby-border-strong);
+  --color-koby-text: var(--koby-text);
+  --color-koby-text-secondary: var(--koby-text-secondary);
+  --color-koby-text-muted: var(--koby-text-muted);
+  --color-koby-accent: var(--koby-accent);
+  --color-koby-accent-hover: var(--koby-accent-hover);
+  --color-koby-accent-text: var(--koby-accent-text);
+  --color-koby-accent-subtle: var(--koby-accent-subtle);
+  --color-koby-success: var(--koby-success);
+  --color-koby-success-subtle: var(--koby-success-subtle);
+  --color-koby-warning: var(--koby-warning);
+  --color-koby-warning-subtle: var(--koby-warning-subtle);
+  --color-koby-error: var(--koby-error);
+  --color-koby-error-subtle: var(--koby-error-subtle);
+  --color-koby-info: var(--koby-info);
+  --color-koby-info-subtle: var(--koby-info-subtle);
+  --color-koby-pending: var(--koby-pending);
+  --color-koby-pending-subtle: var(--koby-pending-subtle);
+  --color-koby-ai: var(--koby-ai);
+  --color-koby-ai-subtle: var(--koby-ai-subtle);
+  --color-koby-demo-bg: var(--koby-demo-bg);
+  --color-koby-demo-border: var(--koby-demo-border);
+  --color-koby-demo-text: var(--koby-demo-text);
+
+  --radius-koby-sm: var(--koby-radius-sm);
+  --radius-koby-md: var(--koby-radius-md);
+  --radius-koby-lg: var(--koby-radius-lg);
+
+  --font-sans: var(--koby-font-sans);
+  --font-mono: var(--koby-font-mono);
+}
+
+body {
+  background: var(--koby-bg);
+  color: var(--koby-text);
+}
+
+/* Visible keyboard focus everywhere (DESIGN.md Section 31). */
+:focus-visible {
+  outline: 2px solid var(--koby-accent);
+  outline-offset: 2px;
+  border-radius: var(--koby-radius-sm);
+}
+
+::selection {
+  background: var(--koby-accent-subtle);
+}
+
+/* Restrained motion baseline; honors reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Landing reveal (Phase 2) — opacity + 12px rise only, driven by the
+ * Reveal client leaf. Visible without scripting; the global
+ * reduced-motion rule above already collapses the transition.
+ */
+.koby-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.koby-reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (scripting: none) {
+  .koby-reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Horizontal flow strips scroll on narrow viewports without a visible bar. */
+.koby-no-scrollbar {
+  scrollbar-width: none;
+}
+
+.koby-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Strata visual world (Phase 2) — paper grain seated over banded fields,
+ * plus the settlement fault that draws across the bands when its Reveal
+ * parent enters. Matte and static by default; the global reduced-motion
+ * rule collapses the draw to instant.
+ */
+.koby-grain {
+  position: relative;
+}
+
+.koby-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+}
+
+.koby-fault {
+  z-index: 2;
+}
+
+.koby-fault[data-orient="vertical"] {
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s;
+}
+
+.koby-fault[data-orient="horizontal"] {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s;
+}
+
+.koby-reveal-visible .koby-fault {
+  transform: none;
+}
+
+/*
+ * Surface depth scale (Phase 3 redesign). Depth comes from surface
+ * contrast + borders + position, never blur or heavy shadow.
+ * L0 base page -> L1 subtle shift (bg-secondary) -> L2 bordered technical
+ * surface -> L3 focused interaction surface (strong border + inset hairline).
+ */
+.koby-l3 {
+  border: 1px solid var(--koby-border-strong);
+  box-shadow: inset 0 0 0 1px var(--koby-border);
+}
+
+/*
+ * Offset technical frame: a second boundary drawn behind the element.
+ * For plates and figures that deserve a meaningful boundary.
+ */
+.koby-frame {
+  position: relative;
+}
+
+.koby-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translate(10px, 10px);
+  border: 1px solid var(--koby-border-strong);
+  border-radius: var(--koby-radius-lg);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .koby-frame::before {
+    transform: translate(6px, 6px);
+  }
+}
+
+/* Directional flow line: animated dash = movement through the system. */
+@keyframes koby-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.koby-flowdash {
+  stroke-dasharray: 4 4;
+  animation: koby-dash 1.4s linear infinite;
+}
