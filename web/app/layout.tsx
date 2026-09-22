@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -28,10 +29,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
       <body className="min-h-full">
+        {/* Theme init must run before first paint (no flash) but a <script>
+            is not a valid direct child of <html> — React 19 rejects that
+            with a hydration error. As the first child of <body> it is valid
+            HTML: being inline and synchronous, it executes during parsing
+            before the rest of the body renders. beforeInteractive keeps it
+            in the initial document ahead of hydration. */}
+        <Script
+          id="koby-theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
         <AppShell>{children}</AppShell>
       </body>
     </html>

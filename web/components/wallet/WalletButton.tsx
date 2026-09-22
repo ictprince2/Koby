@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { truncateHex } from "@/lib/format";
 import { monadConfig } from "@/lib/monad";
 import { toHexChainId, useWallet } from "@/hooks/useWallet";
@@ -131,8 +132,9 @@ export function WalletButton() {
                   className="flex min-h-[44px] w-full items-center gap-3 rounded-koby-sm px-2 py-2 text-left text-sm text-koby-text transition-colors hover:bg-koby-bg-secondary disabled:opacity-50"
                 >
                   {w.icon ? (
-                    // Icon supplied by the wallet's own EIP-6963 announcement.
-                    <img src={w.icon} alt="" width={24} height={24} className="h-6 w-6 rounded-full" />
+                    // Icon supplied by the wallet's own EIP-6963 announcement
+                    // (runtime data URL, so the image is explicitly unoptimized).
+                    <Image src={w.icon} alt="" width={24} height={24} unoptimized className="h-6 w-6 rounded-full" />
                   ) : (
                     <span aria-hidden="true" className="h-6 w-6 rounded-full bg-koby-border" />
                   )}

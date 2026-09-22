@@ -1,20 +1,25 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
-
-function initialDark(): boolean {
-  if (typeof document === "undefined") return false;
-  return document.documentElement.classList.contains("dark");
-}
 
 /**
  * ThemeToggle — light/dark switch with hierarchy parity in both modes
  * (DESIGN.md Section 7). Persists to localStorage; defaults to OS preference
  * via the init script in app/layout.tsx.
+ *
+ * Source of truth for the theme is `document.documentElement`'s `dark`
+ * class (set pre-hydration by the init script). The initial render always
+ * uses the light default so server HTML and the first client render agree;
+ * the real value is read in an effect after hydration, so there is no
+ * hydration mismatch regardless of the stored/OS theme.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const [dark, setDark] = useState(initialDark);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
 
   const toggle = useCallback(() => {
     const next = !document.documentElement.classList.contains("dark");
