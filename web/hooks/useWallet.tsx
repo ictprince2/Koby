@@ -4,18 +4,22 @@
  * Wallet abstraction (ARCHITECTURE.md Section 9).
  *
  * Provider-agnostic interface (connect / address / chain / send) over
- * injected EIP-1193 wallets. Koby never hard-codes a wallet: lib/wallets.ts
- * discovers what is actually installed (EIP-6963 announcements plus legacy
- * `window.ethereum` fallbacks) and the user picks one. A single installed
- * wallet connects directly, preserving the one-click flow; several
- * installed wallets require an explicit choice, so no wallet can silently
- * capture the connection. Privy sits behind this same interface later;
- * components and hooks only ever touch this context, never a provider SDK.
+ * injected EIP-1193 wallets plus Privy-surfaced wallets. Koby never
+ * hard-codes a wallet: lib/wallets.ts discovers what is actually installed
+ * (EIP-6963 announcements plus legacy `window.ethereum` fallbacks) and the
+ * user picks one. A single installed wallet connects directly, preserving
+ * the one-click flow; several installed wallets require an explicit choice,
+ * so no wallet can silently capture the connection. Privy sits behind this
+ * same interface via components/providers/PrivyWalletBridge (embedded wallet
+ * creation + session wallets adapted to EIP-1193); components and hooks only
+ * ever touch this context, never a provider SDK.
  * Koby has no account layer: the connected address is the only identity.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { monadConfig } from "@/lib/monad";
+import { isPrivyConfigured, isPrivyEntryId } from "@/lib/privy";
+import { PrivyWalletBridge, type PrivyActions } from "@/components/providers/PrivyWalletBridge";
 import {
   discoverInjectedWallets,
   type DiscoveredWallet,
@@ -43,13 +47,23 @@ type WalletContextValue = {
   chainId: number | null;
   /** True when the wallet is on the configured Monad network. */
   isCorrectNetwork: boolean;
-  /** True when at least one injected wallet was discovered. */
+  /** True when at least one wallet (injected or Privy) is available. */
   hasProvider: boolean;
-  /** Actually installed wallets; empty until discovery completes. */
+  /** All connectable wallets: injected discoveries plus the Privy entry when present. */
   wallets: DiscoveredWallet[];
   /** The user-selected wallet, or null when none is selected. */
   activeWallet: DiscoveredWallet | null;
   error: string | null;
+  /** True when a Privy App ID is configured (Privy onboarding available). */
+  privyAvailable: boolean;
+  /** True when Privy reports an authenticated user. Always false when unconfigured. */
+  privyAuthenticated: boolean;
+  /**
+   * User-initiated Privy onboarding: opens login when logged out, creates the
+   * embedded wallet when logged in without one, or connects the Privy entry
+   * when it already exists. Never touches injected wallets.
+   */
+  connectPrivy: () => Promise<void>;
   /** Re-run discovery (chooser open, new install). Returns what was found. */
   refreshWallets: () => Promise<DiscoveredWallet[]>;
   /**
@@ -70,8 +84,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
+  const [injectedWallets, setInjectedWallets] = useState<DiscoveredWallet[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Privy-surfaced entry + session, merged behind the same interface.
+  // Null unless the bridge reports a live Privy-session wallet.
+  const [privyEntry, setPrivyEntry] = useState<DiscoveredWallet | null>(null);
+  const [privyAuthenticated, setPrivyAuthenticated] = useState(false);
+  const privyActionsRef = useRef<PrivyActions | null>(null);
+
+  const wallets = useMemo(
+    () => (privyEntry ? [...injectedWallets, privyEntry] : injectedWallets),
+    [injectedWallets, privyEntry],
+  );
 
   const activeWallet = useMemo(
     () => wallets.find((w) => w.id === selectedId) ?? null,
@@ -81,11 +105,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const refreshWallets = useCallback(async (): Promise<DiscoveredWallet[]> => {
     const found = await discoverInjectedWallets();
-    setWallets(found);
+    setInjectedWallets(found);
     // A lone wallet is selected silently, preserving the one-click flow.
-    // Several wallets always require an explicit user choice.
-    setSelectedId((prev) => (prev === null && found.length === 1 ? found[0].id : prev));
-    return found;
+    // Several wallets always require an explicit user choice. The Privy
+    // entry counts toward the total, so it can never be silently bypassed.
+    const combined = privyEntry ? [...found, privyEntry] : found;
+    setSelectedId((prev) => (prev === null && combined.length === 1 ? combined[0].id : prev));
+    return combined;
+  }, [privyEntry]);
+
+  // Privy bridge reports land here via effects, never during render.
+  // Same-id entries keep their identity so downstream subscriptions stay stable.
+  const handlePrivyEntry = useCallback((entry: DiscoveredWallet | null) => {
+    setPrivyEntry((prev) => (prev?.id === entry?.id ? prev : entry));
+  }, []);
+
+  const handlePrivyAuth = useCallback((value: boolean) => {
+    setPrivyAuthenticated(value);
   }, []);
 
   // Initial discovery on mount.
@@ -182,6 +218,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 
   const disconnect = useCallback(() => {
+    // Ending a Privy session is programmatic: log out only when the active
+    // connection is the Privy entry. An injected connection never touches
+    // the Privy session.
+    if (isPrivyEntryId(selectedId)) {
+      const actions = privyActionsRef.current;
+      if (actions) void actions.logout().catch(() => {});
+    }
     // Injected wallets have no programmatic disconnect; forget locally and
     // clear the selection so the subscription effect above unsubscribes.
     // Clearing state nulls the context provider, so no financing
@@ -191,7 +234,39 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setStatus("disconnected");
     setError(null);
     setSelectedId(null);
-  }, []);
+  }, [selectedId]);
+
+  const connectPrivy = useCallback(async () => {
+    setError(null);
+    const actions = privyActionsRef.current;
+    if (!isPrivyConfigured() || !actions) {
+      setError("Privy onboarding is not available in this build. Use an injected wallet to continue.");
+      return;
+    }
+    try {
+      // Logged out: open the Privy login modal. Completion (plus the
+      // embedded-wallet prompt) arrives through the bridge; the entry then
+      // appears in the wallet list for an explicit connect.
+      if (!privyAuthenticated) {
+        actions.login();
+        return;
+      }
+      // Logged in without a wallet yet: create the embedded wallet now
+      // (user-initiated; the bridge surfaces it when ready).
+      if (!privyEntry) {
+        await actions.createWallet();
+        return;
+      }
+      await connect(privyEntry.id);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      // A pre-existing embedded wallet surfacing late is not an error.
+      if (/already exists/i.test(message)) return;
+      // User declining login/creation is a clean return, not an app error.
+      if (/rejected|denied|4001|exited/i.test(message)) return;
+      setError("Privy wallet setup failed. Try again or use an injected wallet.");
+    }
+  }, [privyAuthenticated, privyEntry, connect]);
 
   const switchToMonad = useCallback(async () => {
     if (!activeProvider) {
@@ -252,6 +327,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       disconnect,
       switchToMonad,
       provider: status === "connected" && address && activeProvider ? activeProvider : null,
+      privyAvailable: isPrivyConfigured(),
+      privyAuthenticated,
+      connectPrivy,
     }),
     [
       status,
@@ -265,10 +343,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       connect,
       disconnect,
       switchToMonad,
+      privyAuthenticated,
+      connectPrivy,
     ],
   );
 
-  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+  return (
+    <WalletContext.Provider value={value}>
+      {children}
+      {/* Mounted only when an App ID is configured, guaranteeing a
+          PrivyProvider ancestor (see components/providers/Providers). */}
+      {isPrivyConfigured() ? (
+        <PrivyWalletBridge
+          onEntry={handlePrivyEntry}
+          onAuth={handlePrivyAuth}
+          actionsRef={privyActionsRef}
+        />
+      ) : null}
+    </WalletContext.Provider>
+  );
 }
 
 export function useWallet(): WalletContextValue {

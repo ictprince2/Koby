@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { AppShell } from "@/components/layout/AppShell";
+import { Providers } from "@/components/providers/Providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,7 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
-        <AppShell>{children}</AppShell>
+        <Providers>
+          <AppShell>{children}</AppShell>
+        </Providers>
       </body>
     </html>
   );
