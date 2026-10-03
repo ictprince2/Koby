@@ -39,6 +39,51 @@ export function toHexChainId(chainId: number): string {
   return `0x${chainId.toString(16)}`;
 }
 
+/**
+ * Persisted wallet selection (discovery id only).
+ *
+ * The connected wallet/address is in-memory React state, so a browser reload
+ * previously dropped it and forced the user to click Connect again — even
+ * though the Privy session and the injected-wallet authorization still
+ * existed. Persisting the *selection intent* (a public discovery id such as
+ * an EIP-6963 rdns, `injected:window.ethereum`, or `privy:0x…`) lets the
+ * provider silently re-validate via `eth_accounts`/`eth_chainId` on reload
+ * without re-prompting. This stores no private key, secret, or credential —
+ * only which already-discovered wallet the user chose.
+ */
+const WALLET_SELECTION_STORAGE_KEY = "koby:wallet:selected-id:v1";
+
+function readStoredWalletId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(WALLET_SELECTION_STORAGE_KEY);
+    if (!raw) return null;
+    const trimmed = raw.trim();
+    if (trimmed === "" || trimmed.length > 128) return null;
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredWalletId(id: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(WALLET_SELECTION_STORAGE_KEY, id);
+  } catch {
+    // Private-mode / quota failures: persistence is best-effort only.
+  }
+}
+
+function clearStoredWalletId(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(WALLET_SELECTION_STORAGE_KEY);
+  } catch {
+    // Best-effort only.
+  }
+}
+
 export type WalletStatus = "disconnected" | "connecting" | "connected";
 
 type WalletContextValue = {
@@ -85,7 +130,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [chainId, setChainId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [injectedWallets, setInjectedWallets] = useState<DiscoveredWallet[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Restore the user's last explicit wallet choice (public discovery id only)
+  // so a reload/navigation re-selects the same wallet; the sync effect below
+  // then re-validates via silent `eth_accounts` without prompting.
+  const [selectedId, setSelectedId] = useState<string | null>(() => readStoredWalletId());
   // Privy-surfaced entry + session, merged behind the same interface.
   // Null unless the bridge reports a live Privy-session wallet.
   const [privyEntry, setPrivyEntry] = useState<DiscoveredWallet | null>(null);
@@ -128,6 +176,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refreshWallets();
   }, [refreshWallets]);
+
+  // Persist the explicit selection (discovery id only — never a secret) so a
+  // reload restores intent. Clearing happens only in disconnect(); a null
+  // selection here must not wipe the stored value before the restore below.
+  useEffect(() => {
+    if (selectedId !== null) writeStoredWalletId(selectedId);
+  }, [selectedId]);
+
+  // Restore the persisted selection once wallets are known. This covers the
+  // Privy-session wallet arriving late (Privy SDK init + getEthereumProvider)
+  // and injected discovery resolving after mount. It never auto-picks a wallet
+  // the user did not explicitly choose: it only re-selects the stored id when
+  // that exact wallet is present. State lands in the timeout callback below,
+  // never synchronously in the effect body.
+  useEffect(() => {
+    if (selectedId !== null) return;
+    const stored = readStoredWalletId();
+    if (!stored) return;
+    if (!wallets.some((w) => w.id === stored)) return;
+    const timer = window.setTimeout(() => {
+      setSelectedId((prev) => prev ?? stored);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [wallets, selectedId]);
 
   // Silent sync + event subscriptions follow the SELECTED provider, never a
   // hard-coded global. Re-runs on selection change; cleanup unsubscribes.
@@ -228,12 +300,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // Injected wallets have no programmatic disconnect; forget locally and
     // clear the selection so the subscription effect above unsubscribes.
     // Clearing state nulls the context provider, so no financing
-    // transaction can proceed.
+    // transaction can proceed. The persisted selection is cleared too, so a
+    // reload after an explicit disconnect stays disconnected.
     setAddress(null);
     setChainId(null);
     setStatus("disconnected");
     setError(null);
     setSelectedId(null);
+    clearStoredWalletId();
   }, [selectedId]);
 
   const connectPrivy = useCallback(async () => {
