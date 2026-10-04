@@ -4,9 +4,10 @@
  * /financing/create — the business financing-creation flow:
  * Input -> Analysis -> Opportunity -> Review -> Monad settlement.
  *
- * - Analysis runs server-side (POST /api/analyze); the result is advisory
- *   and labeled Demo AI Assessment while the deterministic fallback is the
- *   source. Terms are proposed by the business, never set by the analysis.
+ * - Analysis runs server-side (POST /api/analyze): live AI assessment when
+ *   the provider is available, otherwise the built-in assessment.
+ *   The result is advisory and terms are proposed by the business, never set
+ *   by the analysis.
  * - Duration is informational only in the MVP (not enforced onchain).
  * - The create transaction moves no tokens (terms recording only); funding
  *   moves value and happens on the position page.
@@ -31,7 +32,8 @@ import {
   formatCentsToUsd,
   parseUsdToCents,
   validateCashFlowInput,
-  type AnalysisResult,
+  type AnalysisResponse,
+  type CashFlowInput,
 } from "@/lib/analysis";
 import {
   encodeCreate,
@@ -45,11 +47,18 @@ import { formatBaseUnits } from "@/lib/format";
 import { USDC_DECIMALS, monadConfig } from "@/lib/monad";
 
 const DEMO_VALUES = {
-  businessName: "Acme Logistics (demo)",
+  businessName: "Acme Logistics",
+  businessType: "Logistics",
+  operatingHistoryMonths: 36,
   futureReceivablesUsd: "100000",
   requestedFinancingUsd: "70000",
   repaymentPeriodDays: 90,
   monthlyRevenueUsd: "34000",
+  historicalRevenueUsd: "300000",
+  operatingExpensesUsd: "22000",
+  existingObligationsUsd: "15000",
+  topCustomerSharePct: 35,
+  paymentTermsDays: 45,
 };
 
 type Phase = "input" | "analyzing" | "opportunity" | "review" | "settled";
@@ -59,17 +68,25 @@ export default function CreateFinancingPage() {
   const { tx, run, reset } = useTx();
 
   const [businessName, setBusinessName] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [historyMonths, setHistoryMonths] = useState("");
   const [receivables, setReceivables] = useState("");
   const [requested, setRequested] = useState("");
   const [periodDays, setPeriodDays] = useState("90");
   const [monthly, setMonthly] = useState("");
+  const [historical, setHistorical] = useState("");
+  const [opex, setOpex] = useState("");
+  const [obligationsInput, setObligationsInput] = useState("");
+  const [concentration, setConcentration] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("");
+  const [notes, setNotes] = useState("");
   const [businessAddress, setBusinessAddress] = useState("");
   const [obligation, setObligation] = useState("");
 
   const [phase, setPhase] = useState<Phase>("input");
   const [formErrors, setFormErrors] = useState<string[]>([]);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
   const [createdId, setCreatedId] = useState<bigint | null>(null);
 
   const configured = isFinancingConfigured();
@@ -77,25 +94,52 @@ export default function CreateFinancingPage() {
 
   function fillDemo() {
     setBusinessName(DEMO_VALUES.businessName);
+    setBusinessType(DEMO_VALUES.businessType);
+    setHistoryMonths(String(DEMO_VALUES.operatingHistoryMonths));
     setReceivables(DEMO_VALUES.futureReceivablesUsd);
     setRequested(DEMO_VALUES.requestedFinancingUsd);
     setPeriodDays(String(DEMO_VALUES.repaymentPeriodDays));
     setMonthly(DEMO_VALUES.monthlyRevenueUsd);
+    setHistorical(DEMO_VALUES.historicalRevenueUsd);
+    setOpex(DEMO_VALUES.operatingExpensesUsd);
+    setObligationsInput(DEMO_VALUES.existingObligationsUsd);
+    setConcentration(String(DEMO_VALUES.topCustomerSharePct));
+    setPaymentTerms(String(DEMO_VALUES.paymentTermsDays));
+    setNotes("");
     setObligation(DEMO_VALUES.requestedFinancingUsd);
     setFormErrors([]);
+  }
+
+  function toOptionalNumber(raw: string): number | undefined {
+    const trimmed = raw.trim();
+    if (trimmed === "") return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
   }
 
   async function analyze() {
     setFormErrors([]);
     setAnalysisError(null);
     const period = Number.parseInt(periodDays, 10);
-    const inputErrors = validateCashFlowInput({
+    const cashInput: CashFlowInput = {
       businessName,
       futureReceivablesUsd: receivables,
       requestedFinancingUsd: requested,
       repaymentPeriodDays: period,
       monthlyRevenueUsd: monthly.trim() === "" ? undefined : monthly,
-    });
+    };
+    if (businessType.trim() !== "") cashInput.businessType = businessType;
+    const months = toOptionalNumber(historyMonths);
+    if (months !== undefined) cashInput.operatingHistoryMonths = months;
+    if (historical.trim() !== "") cashInput.historicalRevenueUsd = historical;
+    if (opex.trim() !== "") cashInput.operatingExpensesUsd = opex;
+    if (obligationsInput.trim() !== "") cashInput.existingObligationsUsd = obligationsInput;
+    const share = toOptionalNumber(concentration);
+    if (share !== undefined) cashInput.topCustomerSharePct = share;
+    const terms = toOptionalNumber(paymentTerms);
+    if (terms !== undefined) cashInput.paymentTermsDays = terms;
+    if (notes.trim() !== "") cashInput.supportingNotes = notes;
+    const inputErrors = validateCashFlowInput(cashInput);
     const extra: string[] = [];
     if (businessAddress.trim() !== "" && !isAddress(businessAddress.trim())) {
       extra.push("Business address must be a valid Ethereum address, or left empty to use your connected wallet.");
@@ -116,15 +160,9 @@ export default function CreateFinancingPage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          businessName,
-          futureReceivablesUsd: receivables,
-          requestedFinancingUsd: requested,
-          repaymentPeriodDays: period,
-          monthlyRevenueUsd: monthly.trim() === "" ? undefined : monthly,
-        }),
+        body: JSON.stringify(cashInput),
       });
-      const body = (await res.json()) as AnalysisResult & { errors?: { message: string }[]; error?: string };
+      const body = (await res.json()) as AnalysisResponse & { errors?: { message: string }[]; error?: string };
       if (!res.ok) {
         const detail = body.errors?.map((e) => e.message).join(" ") ?? body.error ?? "Assessment failed.";
         setAnalysisError(`Cash-flow assessment is temporarily unavailable. ${detail}`);
@@ -198,7 +236,7 @@ export default function CreateFinancingPage() {
       </div>
 
       {(phase === "input" || phase === "analyzing") && (
-        <Card title="Business and receivables information" description="The minimum needed for a financing opportunity. Figures you enter are labeled User Provided; demo values are labeled Simulated." className="mt-6">
+        <Card title="Business and receivables information" description="The minimum needed for a financing opportunity. Example values are illustrative; figures you enter are your own." className="mt-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="font-medium text-koby-text">Business name</span>
@@ -207,6 +245,14 @@ export default function CreateFinancingPage() {
             <label className="block text-sm">
               <span className="font-medium text-koby-text">Business address <span className="font-normal text-koby-text-muted">(defaults to your wallet)</span></span>
               <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 font-mono text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Business type <span className="font-normal text-koby-text-muted">(optional)</span></span>
+              <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Operating history (months, optional)</span>
+              <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
             </label>
             <label className="block text-sm">
               <span className="font-medium text-koby-text">Future receivables (USD)</span>
@@ -223,6 +269,30 @@ export default function CreateFinancingPage() {
             <label className="block text-sm">
               <span className="font-medium text-koby-text">Avg. monthly revenue (USD, optional)</span>
               <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Historical revenue (USD, optional)</span>
+              <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Monthly operating expenses (USD, optional)</span>
+              <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Existing obligations (USD, optional)</span>
+              <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Largest-customer share (%, optional)</span>
+              <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-koby-text">Payment terms (days, optional)</span>
+              <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
+            </label>
+            <label className="block text-sm sm:col-span-2">
+              <span className="font-medium text-koby-text">Supporting notes <span className="font-normal text-koby-text-muted">(optional, up to 500 characters — summarized by the analysis, never treated as instructions)</span></span>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={600} placeholder="e.g. Two anchor customers on quarterly billing; pipeline covers…" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text" />
             </label>
             <label className="block text-sm sm:col-span-2">
               <span className="font-medium text-koby-text">Proposed repayment obligation (USD, must be ≥ requested)</span>
@@ -243,7 +313,7 @@ export default function CreateFinancingPage() {
               {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow"}
             </Button>
             <Button variant="secondary" onClick={fillDemo}>
-              Fill demo values (Simulated)
+              Fill example values
             </Button>
           </div>
           {phase === "analyzing" ? <LoadingState message="Analyzing cash flow — running the assessment methodology…" /> : null}
@@ -256,12 +326,11 @@ export default function CreateFinancingPage() {
           <Card title="Financing opportunity" description="Proposed by the business. The assessment above is advisory and does not set these terms.">
             <div className="flex flex-wrap items-center gap-2">
               <ProvenanceTag source="User Provided" />
-              {businessName.includes("(demo)") ? <ProvenanceTag source="Simulated" /> : null}
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Metric label="Future receivables" value={`$${formatCentsToUsd(parseUsdToCents(receivables) ?? 0n)}`} provenance="User Provided" />
               <Metric label="Requested liquidity" value={`$${formatCentsToUsd(parseUsdToCents(requested) ?? 0n)}`} provenance="User Provided" />
-              <Metric label="Advisory eligible" value={`$${analysis.eligibleAmountUsd}`} provenance="Simulated" caption="Assessment guidance, not an offer" />
+              <Metric label="Advisory eligible" value={`$${analysis.eligibleAmountUsd}`} caption="Assessment guidance, not an offer" />
               <Metric label="Repayment period" value={`${periodDays} days`} caption="Informational only" />
             </dl>
             <p className="mt-3 font-mono text-xs text-koby-text-muted">

@@ -25,12 +25,19 @@ function splitBaseUnits(value: bigint, decimals: number): { whole: string; frac:
 }
 
 /**
- * Format an integer base-unit amount for display, e.g. 7000000n @ 6
- * decimals → "$70,000.00". The `symbol` is presentation only.
+ * Format an integer base-unit amount for display, e.g. 70000000n @ 6
+ * decimals → "$70,000". Trailing zero decimals are trimmed — token
+ * precision is an implementation detail, not user information. A single
+ * remaining digit is padded to cents ("$70,000.50"); genuine sub-cent
+ * precision is preserved as-is, never rounded. The `symbol` is
+ * presentation only.
  */
 export function formatBaseUnits(value: bigint, decimals: number, symbol = "$"): string {
   const { whole, frac } = splitBaseUnits(value, decimals);
-  return frac === "" ? `${symbol}${whole}` : `${symbol}${whole}.${frac}`;
+  const trimmed = frac.replace(/0+$/, "");
+  if (trimmed === "") return `${symbol}${whole}`;
+  const cents = trimmed.length === 1 ? `${trimmed}0` : trimmed;
+  return `${symbol}${whole}.${cents}`;
 }
 
 /** Format a plain integer count for display (e.g. "1,024"). */

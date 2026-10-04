@@ -50,11 +50,14 @@ contract address arrives via `NEXT_PUBLIC_CONTRACT_ADDRESS`.
 
 ## AI
 
-`POST /api/analyze` is the server-side assessment boundary. The MVP runs a
+`POST /api/analyze` is the server-side assessment boundary. It serves live
+Kimi analysis (Moonshot, OpenAI-compatible, key server-side only) when the
+provider is configured and returns valid output, and otherwise the
 documented, versioned deterministic methodology (`koby-deterministic-v0`),
-labeled **Demo AI Assessment / Simulated**, behind the same
-`RiskAssessment` interface a live provider (Kimi, OpenAI-compatible) plugs
-into later. Output is schema/range/content-validated before use.
+labeled **Demo AI Assessment / Simulated**. Both paths return the same
+`RiskAssessment` core inside a structured financing-analysis envelope with a
+mandatory human/financier-review flag; output is schema/range/content-validated
+before use.
 
 ## Contracts
 
@@ -95,7 +98,9 @@ confirmations (see `docs/HACKATHON.md` Section 4).
   state until `NEXT_PUBLIC_CONTRACT_ADDRESS` is set.
 - History reads contract logs directly (pre-ENVIO); RPC range limits
   surface as "unavailable", never fabricated events.
-- Wallet layer is injected EIP-1193 behind a provider-agnostic abstraction;
-  Privy plugs in behind the same interface later.
+- Wallet layer is provider-agnostic (`hooks/useWallet`): injected EIP-1193
+  wallets plus implemented Privy onboarding (`Providers` + `PrivyWalletBridge`,
+  gated by `NEXT_PUBLIC_PRIVY_APP_ID`). Injected wallets keep working when
+  Privy is unconfigured.
 - Nansen/ENVIO/Kimi-live are not yet wired; analysis fallback is labeled.
 - No `Active`/`Defaulted`/`Cancelled` states, no admin controls by design.

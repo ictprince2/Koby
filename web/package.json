@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS='--dns-result-order=ipv4first --no-network-family-autoselection' next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "NODE_OPTIONS='--dns-result-order=ipv4first --no-network-family-autoselection' next start",
     "lint": "eslint"
   },
   "dependencies": {

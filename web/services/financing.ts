@@ -180,38 +180,171 @@ export type FinancingEvent = {
 
 const EVENT_NAMES = ["FinancingCreated", "FinancingFunded", "RepaymentRecorded", "FinancingCompleted"] as const;
 
+type EventName = (typeof EVENT_NAMES)[number];
+
 /**
- * Read raw contract logs directly from RPC. This is the pre-ENVIO history
- * path: best-effort for lists/history, while actionable state always comes
- * from direct reads above. Throws on RPC range limits — callers show the
- * honest "activity unavailable" state, never fabricated events.
+ * Monad testnet RPC limits eth_getLogs to ~100 blocks per request
+ * (observed: 97-block ranges succeed, 98+ fail with "limited to a 100
+ * range"). Every log read below stays well under that limit by chunking.
+ * Chunk size 50 leaves margin for inclusive counting and latest advancing
+ * mid-scan. Throws on failure — callers show the honest "activity
+ * unavailable" state, never fabricated events.
  */
-export async function readFinancingEvents(fromBlock: bigint = 0n): Promise<FinancingEvent[]> {
+const EVENT_LOG_CHUNK_SIZE = 50n;
+/** Narrow window around a timestamp-anchored block (covers same-second blocks). */
+const ANCHORED_WINDOW = 300n;
+const ANCHORED_LOOKBACK = 10n;
+
+function toFinancingEvent(
+  name: EventName,
+  log: { args?: Record<string, unknown>; transactionHash?: string | null; blockNumber: bigint },
+): FinancingEvent | null {
+  const args: Record<string, string | bigint> = {};
+  for (const [k, v] of Object.entries(log.args ?? {})) {
+    if (typeof v === "bigint" || typeof v === "string") args[k] = v;
+  }
+  const positionId = args.id;
+  if (typeof positionId !== "bigint") return null;
+  return { name, positionId, txHash: log.transactionHash ?? "", blockNumber: log.blockNumber, args };
+}
+
+async function fetchEventChunks(
+  name: EventName,
+  fromBlock: bigint,
+  toBlock: bigint,
+  onlyId?: bigint,
+): Promise<FinancingEvent[]> {
   const address = contractAddress();
   const out: FinancingEvent[] = [];
-  for (const name of EVENT_NAMES) {
-    const event = kobyFinancingAbi.find((e) => e.type === "event" && e.name === name);
-    if (!event) continue;
+  if (fromBlock > toBlock) return out;
+  let cursor = fromBlock;
+  while (cursor <= toBlock) {
+    let end = cursor + EVENT_LOG_CHUNK_SIZE - 1n;
+    if (end > toBlock) end = toBlock;
     const logs = await publicClient.getContractEvents({
       address,
       abi: kobyFinancingAbi,
       eventName: name,
-      fromBlock,
-      toBlock: "latest",
+      fromBlock: cursor,
+      toBlock: end,
     });
     for (const log of logs) {
-      const args: Record<string, string | bigint> = {};
-      for (const [k, v] of Object.entries(log.args ?? {})) {
-        if (typeof v === "bigint" || typeof v === "string") args[k] = v;
+      const e = toFinancingEvent(name, log);
+      if (!e) continue;
+      if (onlyId !== undefined && e.positionId !== onlyId) continue;
+      out.push(e);
+    }
+    cursor = end + 1n;
+  }
+  return out;
+}
+
+async function blockTimestamp(blockNumber: bigint): Promise<bigint> {
+  const block = await publicClient.getBlock({ blockNumber });
+  return block.timestamp;
+}
+
+/**
+ * First block whose timestamp is >= target. Block timestamps are monotonic
+ * (1s granularity, several blocks per second), so binary search lands on or
+ * a few blocks before the creating transaction; callers scan a narrow
+ * window around the result. Throws when the RPC cannot serve old blocks —
+ * callers surface the honest unavailable state.
+ */
+async function findFirstBlockAtOrAfterTimestamp(
+  target: bigint,
+  low: bigint,
+  high: bigint,
+): Promise<bigint> {
+  let lo = low;
+  let hi = high;
+  while (lo < hi) {
+    const mid = (lo + hi) / 2n;
+    const ts = await blockTimestamp(mid);
+    if (ts < target) lo = mid + 1n;
+    else hi = mid;
+  }
+  return lo;
+}
+
+function clampWindow(center: bigint, latest: bigint): { from: bigint; to: bigint } {
+  const from = center > ANCHORED_LOOKBACK ? center - ANCHORED_LOOKBACK : 0n;
+  let to = center + ANCHORED_WINDOW;
+  if (to > latest) to = latest;
+  return { from, to };
+}
+
+/**
+ * History for one position, timestamp-anchored so a 1.7M-block-old contract
+ * needs ~10s of bounded 50-block reads instead of 19k full-range chunks:
+ * creation/funding blocks are located by timestamp binary search, then only
+ * narrow windows plus the funding→completion span are scanned. Status-aware
+ * early exit (Created stops after its window; Completed stops at its
+ * completion event) keeps Repaying/Funded scans bounded by actual activity.
+ * Only real decoded events are returned, never guesses.
+ */
+export async function readPositionEvents(id: bigint): Promise<FinancingEvent[]> {
+  const pos = await readPosition(id);
+  const latest = await publicClient.getBlockNumber();
+  const out: FinancingEvent[] = [];
+  const seen = new Set<string>();
+
+  const push = (events: FinancingEvent[]) => {
+    for (const e of events) {
+      const key = `${e.name}:${e.blockNumber.toString()}:${e.txHash}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(e);
+    }
+  };
+
+  const creationBlock = await findFirstBlockAtOrAfterTimestamp(pos.createdAt, 0n, latest);
+  const cw = clampWindow(creationBlock, latest);
+  push(await fetchEventChunks("FinancingCreated", cw.from, cw.to, id));
+
+  if (pos.fundedAt !== 0n) {
+    const fundingBlock = await findFirstBlockAtOrAfterTimestamp(pos.fundedAt, creationBlock, latest);
+    const fw = clampWindow(fundingBlock, latest);
+    push(await fetchEventChunks("FinancingFunded", fw.from, fw.to, id));
+
+    // Repayments + completion live between funding and completion/latest.
+    // Completed positions stop at their completion event (nothing can be
+    // emitted for that id afterwards); open positions scan to latest.
+    const completed = pos.status === "Completed";
+    let cursor = fw.from;
+    let done = false;
+    while (cursor <= latest && !done) {
+      let end = cursor + EVENT_LOG_CHUNK_SIZE - 1n;
+      if (end > latest) end = latest;
+      for (const name of ["RepaymentRecorded", "FinancingCompleted"] as const) {
+        const chunk = await fetchEventChunks(name, cursor, end, id);
+        push(chunk);
+        if (completed && name === "FinancingCompleted" && chunk.length > 0) done = true;
       }
-      const positionId = args.id as bigint;
-      out.push({
-        name,
-        positionId,
-        txHash: log.transactionHash ?? "",
-        blockNumber: log.blockNumber,
-        args,
-      });
+      cursor = end + 1n;
+    }
+  }
+
+  out.sort((a, b) => (a.blockNumber < b.blockNumber ? -1 : a.blockNumber > b.blockNumber ? 1 : 0));
+  return out;
+}
+
+/**
+ * Read raw contract logs directly from RPC. This is the pre-ENVIO history
+ * path: best-effort for lists/history, while actionable state always comes
+ * from direct reads above. Bounded 50-block chunking with timestamp-anchored
+ * per-position scans keeps reads under the RPC's ~100-block log range.
+ * Throws on failure — callers show the honest "activity unavailable" state,
+ * never fabricated events.
+ */
+export async function readFinancingEvents(fromBlock: bigint = 0n): Promise<FinancingEvent[]> {
+  const count = await readPositionCount();
+  if (count === 0n) return [];
+  const out: FinancingEvent[] = [];
+  for (let id = 0n; id < count; id++) {
+    const events = await readPositionEvents(id);
+    for (const e of events) {
+      if (e.blockNumber >= fromBlock) out.push(e);
     }
   }
   out.sort((a, b) => (a.blockNumber < b.blockNumber ? -1 : a.blockNumber > b.blockNumber ? 1 : 0));

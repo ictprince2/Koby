@@ -47,6 +47,18 @@
   --koby-demo-border: #a89f8d;
   --koby-demo-text: #5f5747;
 
+  /*
+   * Footer closing section — deliberate deep charcoal in both modes so the
+   * footer reads as distinct from the page. Light mode gets the full
+   * charcoal treatment; dark mode (already near-black page) steps slightly
+   * lighter for subtle contrast. No gradients, no glassmorphism.
+   */
+  --koby-footer-bg: #1a1d1b;
+  --koby-footer-border: #2e332f;
+  --koby-footer-text: #eceee9;
+  --koby-footer-text-secondary: #b4b8b0;
+  --koby-footer-text-muted: #8c928a;
+
   /* Geometry + layout (master redesign: 8/14/18 rhythm, 1152px measure) */
   --koby-radius-sm: 8px;
   --koby-radius-md: 14px;
@@ -96,6 +108,13 @@
   --koby-demo-bg: #211e17;
   --koby-demo-border: #6b6455;
   --koby-demo-text: #c9bfa9;
+
+  /* Footer: one step lighter than the near-black page for subtle contrast. */
+  --koby-footer-bg: #151716;
+  --koby-footer-border: #2b2f2c;
+  --koby-footer-text: #eceee9;
+  --koby-footer-text-secondary: #b4b8b0;
+  --koby-footer-text-muted: #8c928a;
 }
 
 @theme inline {
@@ -126,6 +145,11 @@
   --color-koby-demo-bg: var(--koby-demo-bg);
   --color-koby-demo-border: var(--koby-demo-border);
   --color-koby-demo-text: var(--koby-demo-text);
+  --color-koby-footer-bg: var(--koby-footer-bg);
+  --color-koby-footer-border: var(--koby-footer-border);
+  --color-koby-footer-text: var(--koby-footer-text);
+  --color-koby-footer-text-secondary: var(--koby-footer-text-secondary);
+  --color-koby-footer-text-muted: var(--koby-footer-text-muted);
 
   --radius-koby-sm: var(--koby-radius-sm);
   --radius-koby-md: var(--koby-radius-md);

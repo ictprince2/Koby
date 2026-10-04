@@ -16,7 +16,7 @@ const FACTOR_CATEGORIES = [
  * AnalysisSection — asymmetric ledger: narrow annotation rail beside the
  * assessment surface. Shows the assessment structure with example factor
  * categories and documented example wording. No invented score, no risk
- * verdict; the panel is labeled Simulated.
+ * verdict; the panel shows structure only, with example wording.
  */
 export function AnalysisSection() {
   return (
@@ -58,7 +58,6 @@ export function AnalysisSection() {
             >
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <ProvenanceTag source="AI Analysis" />
-                <ProvenanceTag source="Simulated" />
               </div>
               <dl className="grid gap-5 sm:grid-cols-2">
                 <div>

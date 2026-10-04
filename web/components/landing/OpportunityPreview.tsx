@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
-import { ProvenanceTag } from "@/components/ui/ProvenanceTag";
 import { Reveal } from "@/components/landing/Reveal";
 import { SectionHeading } from "@/components/landing/SectionHeading";
 import { TechnicalLabel } from "@/components/landing/TechnicalLabel";
@@ -27,13 +26,13 @@ const FIELDS = [
   {
     label: "Risk signals",
     value: "Assessment",
-    note: "AI summary with stated confidence, simulated here",
+    note: "AI summary with stated confidence",
     soft: false,
   },
 ] as const;
 
 /**
- * OpportunityPreview — one simulated example as a schedule plate: an
+ * OpportunityPreview — one example as a schedule plate: an
  * offset-framed surface with ledger rows, not a generic card. No invented
  * obligation figure, no status badge that could read as onchain state, no
  * ranking language. The live marketplace lists only real positions.
@@ -74,12 +73,8 @@ export function OpportunityPreview() {
                     Acme Logistics
                   </h3>
                   <p className="mt-0.5 text-xs text-koby-text-muted">
-                    Simulated example listing. Fictional business; nothing here is onchain.
+                    Example listing. Fictional business; nothing here is onchain.
                   </p>
-                </div>
-                <div className="flex gap-2">
-                  <ProvenanceTag source="Simulated" />
-                  <ProvenanceTag source="Demo" />
                 </div>
               </div>
               <dl>

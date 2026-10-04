@@ -1,14 +1,23 @@
 /**
- * Configuration abstraction (Phase 1 skeleton).
+ * Configuration abstraction for footer display.
  *
- * D23 — TECHNICAL VERIFICATION PENDING. No Monad RPC/network values, token
- * addresses, decimals, faucet details, or deployed contract addresses are
- * hardcoded here or anywhere in the frontend. Every external infrastructure
- * fact enters through environment variables, which are EMPTY until D23
- * verification fills them in. `null` means "not configured", never a guess.
+ * Reports the effective Monad Testnet configuration (MONAD.md Section 12):
+ * verified public defaults with NEXT_PUBLIC_* overrides winning. This keeps
+ * the footer consistent with the canonical runtime source of truth
+ * (lib/monad.ts), which applies the same defaults for transactions, wallet,
+ * and chain reads. Public network values (chain name/ID, RPC, explorer) are
+ * not secrets and are safe to default; the deployed contract address has no
+ * default and remains env-only (empty = not yet deployed).
  *
  * See ARCHITECTURE.md Section 22 for categories and web/.env.example for names.
  */
+
+import {
+  MONAD_TESTNET_CHAIN_ID,
+  MONAD_TESTNET_CHAIN_NAME,
+  MONAD_TESTNET_EXPLORER_URL,
+  MONAD_TESTNET_RPC_URL,
+} from "./monad";
 
 function nonEmpty(value: string | undefined): string | null {
   if (value === undefined) return null;
@@ -24,16 +33,16 @@ function parseChainId(value: string | undefined): number | null {
 }
 
 export const kobyConfig = {
-  /** Human-readable network name. Falls back to an explicit pending label. */
-  chainName: nonEmpty(process.env.NEXT_PUBLIC_CHAIN_NAME) ?? "Unconfigured (D23 pending)",
-  /** Chain ID, or null when not configured. Never defaulted to a guess. */
-  chainId: parseChainId(process.env.NEXT_PUBLIC_CHAIN_ID),
-  /** Public RPC endpoint, or null when not configured. */
-  rpcUrl: nonEmpty(process.env.NEXT_PUBLIC_RPC_URL),
+  /** Human-readable network name. Env override wins; defaults to Monad Testnet. */
+  chainName: nonEmpty(process.env.NEXT_PUBLIC_CHAIN_NAME) ?? MONAD_TESTNET_CHAIN_NAME,
+  /** Chain ID. Env override wins; defaults to verified Monad Testnet (10143). */
+  chainId: parseChainId(process.env.NEXT_PUBLIC_CHAIN_ID) ?? MONAD_TESTNET_CHAIN_ID,
+  /** Public RPC endpoint. Env override wins; defaults to verified testnet RPC. */
+  rpcUrl: nonEmpty(process.env.NEXT_PUBLIC_RPC_URL) ?? MONAD_TESTNET_RPC_URL,
   /** Deployed Koby financing contract address, or null (not yet deployed). */
   contractAddress: nonEmpty(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS),
-  /** Block explorer base URL, or null when not configured. */
-  explorerUrl: nonEmpty(process.env.NEXT_PUBLIC_EXPLORER_URL),
+  /** Block explorer base URL. Env override wins; defaults to MonadVision testnet. */
+  explorerUrl: nonEmpty(process.env.NEXT_PUBLIC_EXPLORER_URL) ?? MONAD_TESTNET_EXPLORER_URL,
 } as const;
 
 /** True only when a real deployed contract address has been configured. */

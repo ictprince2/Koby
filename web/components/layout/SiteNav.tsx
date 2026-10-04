@@ -4,13 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-
-/** Product areas only — ARCHITECTURE.md Section 3. No invented sections. */
-const LINKS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/activity", label: "Activity" },
-] as const;
+import { SITE_LINKS } from "@/lib/nav";
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -29,7 +23,7 @@ export function SiteNav() {
     <nav aria-label="Primary">
       {/* Desktop */}
       <ul className="hidden items-center gap-1 md:flex">
-        {LINKS.map((link) => (
+        {SITE_LINKS.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
@@ -64,7 +58,7 @@ export function SiteNav() {
             id="mobile-nav"
             className="absolute inset-x-4 top-16 z-10 rounded-koby-md border border-koby-border bg-koby-surface p-2"
           >
-            {LINKS.map((link) => (
+            {SITE_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}

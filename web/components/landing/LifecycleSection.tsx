@@ -92,8 +92,7 @@ export function LifecycleSection() {
                     <div className="mt-5 border-t border-koby-border pt-4">
                       <ProvenanceTag source="Testnet" />
                       <p className="mt-2 text-xs leading-relaxed text-koby-text-muted">
-                        Stages from settlement onward are contract state on the test
-                        network at demo time.
+                        Stages from settlement onward are recorded as contract state on Monad Testnet.
                       </p>
                     </div>
                   </div>

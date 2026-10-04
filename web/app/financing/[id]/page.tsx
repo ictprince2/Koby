@@ -26,8 +26,8 @@ import {
   encodeRepay,
   isFinancingConfigured,
   readAllowance,
-  readFinancingEvents,
   readPosition,
+  readPositionEvents,
   sendViaWallet,
   usdToBaseUnits,
   waitForConfirmation,
@@ -117,8 +117,8 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
 
   useEffect(() => {
     if (parsedId === null || !configured) return;
-    readFinancingEvents()
-      .then((all) => setEvents(all.filter((e) => e.positionId === parsedId)))
+    readPositionEvents(parsedId)
+      .then((all) => setEvents(all))
       .catch(() => setEventsError(true));
   }, [parsedId, configured, position?.repaid]);
 

@@ -1,6 +1,5 @@
 import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/Button";
-import { ProvenanceTag } from "@/components/ui/ProvenanceTag";
 import { Reveal } from "@/components/landing/Reveal";
 import { StrataField } from "@/components/landing/StrataField";
 import { TechnicalLabel } from "@/components/landing/TechnicalLabel";
@@ -11,8 +10,8 @@ import { TechnicalLabel } from "@/components/landing/TechnicalLabel";
  * Copy sits in a wide left column; the right holds a settlement column:
  * diffuse estimate ($100,000) settling through bands into full-contrast
  * financing ($70,000) on the seam, crossed by the settlement fault with
- * repayment ticks below. Both figures remain labeled Simulated; nothing
- * here is onchain state.
+ * repayment ticks below. Both figures are presented as an illustrative
+ * example; nothing here is onchain state.
  */
 export function LandingHero() {
   return (
@@ -22,12 +21,9 @@ export function LandingHero() {
       <Container className="relative py-14 sm:py-20">
         <div className="grid items-center gap-12 lg:grid-cols-12">
           <Reveal className="lg:col-span-7">
-            <div className="flex items-center justify-start">
-              <ProvenanceTag source="Simulated" />
-            </div>
             <h1
               id="koby-hero-heading"
-              className="mt-4 max-w-[16ch] text-5xl font-bold tracking-tight text-koby-text sm:text-6xl"
+              className="max-w-[16ch] text-5xl font-bold tracking-tight text-koby-text sm:text-6xl"
             >
               Koby turns future business cash flow into programmable liquidity.
             </h1>
@@ -56,7 +52,10 @@ export function LandingHero() {
               <StrataField bands={6} fault="vertical" />
               <div className="relative flex h-[480px] flex-col justify-between p-6 sm:h-[540px] sm:p-7">
                 <div>
-                  <TechnicalLabel>Future receivables - estimate</TechnicalLabel>
+                  <p className="text-xs text-koby-text-muted">Illustrative example</p>
+                  <div className="mt-3">
+                    <TechnicalLabel>Future receivables - estimate</TechnicalLabel>
+                  </div>
                   <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-koby-text-secondary sm:text-5xl">
                     $100,000
                   </p>

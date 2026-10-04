@@ -12,22 +12,22 @@ const DEMO_STEPS = [
   {
     text: "A cash-flow assessment is produced in the documented structure.",
     provenance: "Simulated" as const,
-    note: "Illustrative on this page; a live call is labeled Demo AI Assessment.",
+    note: "Illustrative on this page; a live assessment names its analysis engine.",
   },
   {
     text: "A $70,000 financing opportunity is created with agreed terms.",
     provenance: "Testnet" as const,
-    note: "Real creation transaction at demo time.",
+    note: "Recorded as an onchain transaction.",
   },
   {
     text: "A financier funds the position; settlement lands onchain.",
     provenance: "Testnet" as const,
-    note: "Real funding transaction at demo time.",
+    note: "Recorded as an onchain transaction.",
   },
   {
     text: "Repayments are submitted and validated; the outstanding balance updates from contract state.",
     provenance: "Testnet" as const,
-    note: "Real repayment transactions, manually triggered.",
+    note: "Submitted as onchain transactions; triggered manually in this version.",
   },
   {
     text: "The qualifying repayment zeroes the balance; the position completes automatically.",
@@ -37,7 +37,7 @@ const DEMO_STEPS = [
 ] as const;
 
 /**
- * DemoSection — the deterministic demo script as a provenance-tagged flow.
+ * DemoSection — the example walkthrough as a provenance-tagged flow.
  * Fictional steps carry Simulated; transaction steps carry Testnet. No
  * hashes, no addresses, no balances beyond the two fictional figures, and
  * no confirmation is ever shown for something that has not happened here.
@@ -52,9 +52,9 @@ export function DemoSection() {
         <Reveal>
           <div id="koby-demo-heading">
             <SectionHeading
-              eyebrow="Demo"
-              title="Two minutes, end to end"
-              description="The same flow a judge watches live: a fictional business, real testnet mechanics. Each step carries its provenance so the two are never confused."
+              eyebrow="Example flow"
+              title="From expected revenue to a completed position"
+              description="A fictional business walks through each stage while settlement steps are recorded as contract state. Example steps and onchain steps are labeled so they are never confused."
             />
           </div>
         </Reveal>

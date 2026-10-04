@@ -19,11 +19,12 @@ import { TrustSection } from "@/components/landing/TrustSection";
  *
  * Honesty rules enforced here, not just documented:
  * - The $100,000 / $70,000 figures are the canonical fictional example,
- *   always labeled Simulated/Demo, never presented as onchain state.
+ *   presented as an illustrative example with contextual notes, never
+ *   presented as onchain state.
  * - No transaction hashes, addresses, balances, or confirmations appear:
  *   nothing on this page has happened onchain yet.
  * - No network values (chain IDs, RPC URLs, contract/token addresses) are
- *   referenced; those arrive only through verified configuration (D23).
+ *   referenced; those arrive only through verified configuration.
  */
 export default function Home() {
   return (
@@ -36,7 +37,7 @@ export default function Home() {
       <SettlementSection />
       <OpportunityPreview />
       <TrustSection />
-      <StrataDivider note="demo flow" />
+      <StrataDivider note="example flow" />
       <DemoSection />
       <ClosingCta />
     </>

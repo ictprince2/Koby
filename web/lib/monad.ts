@@ -1,6 +1,11 @@
 /**
  * Monad network configuration (MONAD.md Section 12).
  *
+ * Canonical runtime source of truth for chain, RPC, explorer, contract, and
+ * asset addresses. Every transaction, wallet, and chain read must derive
+ * from here — never from lib/config.ts, which reports raw env presence for
+ * footer display only.
+ *
  * Values below are the MONAD.md-verified Monad Testnet defaults
  * (verified Sept 19, 2026; re-verify against docs.monad.xyz before
  * deployment — testnet has been reset from genesis before). Every value
@@ -29,6 +34,9 @@ function parseChainId(value: string | undefined, fallback: number): number {
 /** Verified Monad Testnet chain ID (MONAD.md Section 12). */
 export const MONAD_TESTNET_CHAIN_ID = 10143;
 
+/** Verified Monad Testnet network name (MONAD.md Section 12). */
+export const MONAD_TESTNET_CHAIN_NAME = "Monad Testnet";
+
 /** Verified public RPC default (MONAD.md Section 12). */
 export const MONAD_TESTNET_RPC_URL = "https://testnet-rpc.monad.xyz";
 
@@ -46,7 +54,7 @@ export const MONAD_TESTNET_USDC_ADDRESS = "0x534b2f3A21130d7a60830c2Df862319e593
 export const USDC_DECIMALS = 6;
 
 export const monadConfig = {
-  chainName: nonEmpty(process.env.NEXT_PUBLIC_CHAIN_NAME) ?? "Monad Testnet",
+  chainName: nonEmpty(process.env.NEXT_PUBLIC_CHAIN_NAME) ?? MONAD_TESTNET_CHAIN_NAME,
   chainId: parseChainId(process.env.NEXT_PUBLIC_CHAIN_ID, MONAD_TESTNET_CHAIN_ID),
   rpcUrl: nonEmpty(process.env.NEXT_PUBLIC_RPC_URL) ?? MONAD_TESTNET_RPC_URL,
   explorerUrl: nonEmpty(process.env.NEXT_PUBLIC_EXPLORER_URL) ?? MONAD_TESTNET_EXPLORER_URL,
