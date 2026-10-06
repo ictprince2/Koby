@@ -10,11 +10,14 @@ import { toHexChainId, useWallet } from "@/hooks/useWallet";
 /**
  * WalletButton — connect / choose / connected / wrong-network states
  * (USER_FLOW.md Section 5). Never fakes a connection, an address, or a
- * wallet: the chooser lists only actually detected wallets under their own
- * advertised names, plus the live Privy-session wallet when present.
- * Without a provider it says so; on the wrong network it blocks transaction
- * actions and offers a switch. Privy login is an additional onboarding path
- * behind the same WalletContext — never an account layer.
+ * wallet. The primary control uses the real Privy flow when a Privy App ID
+ * is configured (opening the Privy wallet modal with its wallet options);
+ * without Privy it falls back to the injected-wallet chooser, which lists
+ * only actually detected wallets under their own advertised names, plus
+ * the live Privy-session wallet when present. Without a provider it says
+ * so; on the wrong network it blocks transaction actions and offers a
+ * switch. Privy login is an additional onboarding path behind the same
+ * WalletContext — never an account layer.
  */
 export function WalletButton() {
   const {
@@ -84,16 +87,9 @@ export function WalletButton() {
     }
   }
 
-  function privyLabel(): string {
-    if (privyBusy) return "Opening Privy…";
-    if (privyAuthenticated && privyEntry) return "Connect Privy wallet";
-    if (privyAuthenticated) return "Create embedded wallet";
-    return "Continue with Privy";
-  }
-
   if (status === "connected" && address) {
     return (
-      <div className="relative flex max-w-full flex-wrap items-center justify-end gap-2">
+      <div className="relative flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2">
         {!isCorrectNetwork ? (
           <button
             type="button"
@@ -107,10 +103,10 @@ export function WalletButton() {
         <span
           title={activeWallet ? `Connected with ${activeWallet.name}: ${address}` : address}
           aria-label={`Connected wallet ${address}${activeWallet ? ` via ${activeWallet.name}` : ""}`}
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-3 font-mono text-sm text-koby-text"
+          className="inline-flex min-h-[44px] min-w-0 items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-2 font-mono text-sm whitespace-nowrap text-koby-text sm:px-3"
         >
           <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-koby-success" />
-          {truncateHex(address)}
+          <span className="min-w-0 truncate">{truncateHex(address)}</span>
         </span>
         <button
           type="button"
@@ -121,7 +117,7 @@ export function WalletButton() {
               : "Disconnect this wallet from Koby. This only clears Koby's local state; nothing is submitted onchain."
           }
           aria-label="Disconnect wallet"
-          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-koby-sm border border-koby-border bg-koby-surface px-3 text-xs font-semibold text-koby-text-secondary transition-colors hover:text-koby-text"
+          className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-koby-sm border border-koby-border bg-koby-surface px-2 text-xs font-semibold whitespace-nowrap text-koby-text-secondary transition-colors hover:text-koby-text sm:px-3"
         >
           <span aria-hidden="true" className="sm:hidden">✕</span>
           <span className="hidden sm:inline">Disconnect</span>
@@ -140,24 +136,45 @@ export function WalletButton() {
 
   const busy = status === "connecting" || discovering;
 
+  /**
+   * Primary connect control. When Privy onboarding is configured, this uses
+   * the real Privy flow (logged out → opens the Privy wallet modal with its
+   * wallet options; Privy session present → connects the Privy wallet
+   * through the same WalletContext as any injected wallet). When Privy is
+   * unconfigured, it falls back to the existing injected-wallet discovery
+   * flow below. No wallet state is mocked — both paths use useWallet.
+   */
+  async function onPrimaryClick() {
+    if (privyAvailable) {
+      await onPrivyClick();
+      return;
+    }
+    await onConnectClick();
+  }
+
+  const primaryBusy = busy || privyBusy;
+
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
       <button
         type="button"
-        onClick={() => void onConnectClick()}
-        disabled={busy && !chooserOpen}
+        onClick={() => void onPrimaryClick()}
+        disabled={primaryBusy && !chooserOpen}
         aria-expanded={chooserOpen}
         aria-haspopup={chooserOpen ? "dialog" : undefined}
-        title="Connect a wallet"
-        className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm bg-koby-accent px-3 text-sm font-semibold text-koby-accent-text transition-colors hover:bg-koby-accent-hover disabled:opacity-50 sm:px-4"
-      >
-        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+        title={
+          privyAvailable
+            ? "Connect with Privy (email or wallet)"
+            : "Connect a wallet"
+        }
+        className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-koby-sm bg-koby-accent px-3 text-sm font-semibold whitespace-nowrap text-koby-accent-text transition-colors hover:bg-koby-accent-hover disabled:opacity-50 sm:px-4"
+      >        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
         {status === "connecting" ? (
           "Connecting…"
-        ) : discovering ? (
+        ) : discovering || privyBusy ? (
           <>
-            <span className="sm:hidden">Finding…</span>
-            <span className="hidden sm:inline">Finding wallets…</span>
+            <span className="sm:hidden">Opening…</span>
+            <span className="hidden sm:inline">Opening wallet options…</span>
           </>
         ) : (
           <>
@@ -166,22 +183,6 @@ export function WalletButton() {
           </>
         )}
       </button>
-      {privyAvailable ? (
-        <button
-          type="button"
-          onClick={() => void onPrivyClick()}
-          disabled={privyBusy || status === "connecting"}
-          title={
-            privyAuthenticated
-              ? "Use your Privy wallet (embedded wallet created on login when you have none)."
-              : "Log in with Privy (email or wallet). An embedded wallet is offered when you have none."
-          }
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-3 text-sm font-semibold text-koby-text-secondary transition-colors hover:text-koby-text disabled:opacity-50 sm:px-4"
-        >
-          <span className="sm:hidden">Privy</span>
-          <span className="hidden sm:inline">{privyLabel()}</span>
-        </button>
-      ) : null}
       {chooserOpen ? (
         <div
           role="dialog"

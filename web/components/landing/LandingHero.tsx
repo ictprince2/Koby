@@ -23,7 +23,7 @@ export function LandingHero() {
           <Reveal className="lg:col-span-7">
             <h1
               id="koby-hero-heading"
-              className="max-w-[16ch] text-4xl font-bold tracking-tight text-koby-text sm:text-5xl"
+              className="max-w-[16ch] font-bold tracking-tight text-koby-text [font-size:clamp(2rem,9vw,2.6rem)] [line-height:1.1] sm:text-5xl"
             >
               Koby turns future business cash flow into programmable liquidity.
             </h1>
@@ -31,15 +31,16 @@ export function LandingHero() {
               Future revenue, analyzed and financed on transparent terms, settled onchain
               with programmable repayment.
             </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button href="/marketplace" size="lg">
+            <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
+              <Button href="/marketplace" size="lg" className="w-full text-center sm:w-auto">
                 Explore financing opportunities
               </Button>
-              <Button href="/financing/create" variant="secondary" size="lg">
+              <Button href="/financing/create" variant="secondary" size="lg" className="w-full text-center sm:w-auto">
                 Create financing request
               </Button>
             </div>
-            <p className="mt-6 border-t border-koby-border-strong pt-4 font-mono text-[11px] tracking-[0.14em] text-koby-text-muted uppercase">
+            {/* Eyebrow rule: tighter tracking on mobile so it never overflows. */}
+            <p className="mt-6 border-t border-koby-border-strong pt-4 font-mono text-[11px] tracking-[0.08em] text-koby-text-muted uppercase sm:tracking-[0.14em]">
               Estimates above the line. Contracts below it.
             </p>
           </Reveal>

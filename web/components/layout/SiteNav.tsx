@@ -87,7 +87,7 @@ export function MobileNavMenu() {
   }, [open ]);
 
   return (
-    <div ref={rootRef} className="relative md:hidden">
+    <div ref={rootRef} className="relative shrink-0 md:hidden">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

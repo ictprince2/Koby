@@ -1,11 +1,9 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 import { SITE_LINKS } from "@/lib/nav";
-import { SOCIAL_LINKS } from "@/lib/social";
-import { isContractConfigured, isNetworkConfigured, kobyConfig } from "@/lib/config";
-
-/** Official product contact address. Rendered visibly with a mailto: link. */
-const CONTACT_EMAIL = "princesundayk9@gmail.com";
+import { CONTACT_EMAIL } from "@/lib/contact";
+import { kobyConfig } from "@/lib/config";
 
 /**
  * Product column: primary nav entries reused from lib/nav.ts (single source
@@ -51,43 +49,46 @@ function FooterHeading({ children }: { children: string }) {
  * SiteFooter — quiet infrastructure footer, not a SaaS sitemap.
  *
  * Deliberate deep-charcoal closing section (footer-scoped tokens in
- * globals.css, both modes). Brand + product/resources/contact/social
- * columns on one row, then a subtle lower row with the copyright and the
- * testnet status as infrastructure metadata (chain name + contract state
- * from lib/config.ts, reported truthfully: pending states are shown as
- * pending, never guessed).
- *
- * Social/External is configuration-driven (lib/social.ts via
- * NEXT_PUBLIC_X_URL): adding the official X URL later renders the link
- * with no redesign, and no link is invented while it is unset.
+ * globals.css, both modes). Brand row, then Product + Resources
+ * side-by-side on mobile (editorial 12-col grid on desktop), then a
+ * compact contact row, then the lower legal row with copyright and the
+ * network name as infrastructure metadata.
  *
  * Deliberately absent until real destinations exist: Privacy/Terms (no
- * pages), Website (no URL configured).
+ * pages), social links (no official URLs configured — no standby block,
+ * no invented links), per-column contract status (the legal row names
+ * the network only).
  */
 export function SiteFooter() {
   return (
     <footer className="border-t border-koby-footer-border bg-koby-footer-bg">
       <Container>
-        <div className="grid gap-8 py-10 text-left sm:grid-cols-2 sm:py-12 lg:grid-cols-12 lg:gap-10">
-          <div className="min-w-0 sm:col-span-2 lg:col-span-4 lg:max-w-sm">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 py-6 text-left sm:py-12 lg:grid-cols-12 lg:gap-10">
+          <div className="col-span-2 min-w-0 lg:col-span-4 lg:max-w-sm">
             <Link
               href="/"
               aria-label="Koby home"
-              className="text-lg font-bold tracking-tight text-koby-footer-text"
+              className="flex items-center gap-2"
             >
-              Koby
+              <Image
+                src="/koby-logo.svg"
+                alt="Koby"
+                width={24}
+                height={24}
+                className="h-6 w-6 shrink-0"
+              />
+              <span className="text-lg font-bold tracking-tight whitespace-nowrap text-koby-footer-text">
+                Koby
+              </span>
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-koby-footer-text-secondary">
               Onchain receivables financing infrastructure.
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-koby-footer-muted">
-              Turn future business cash flow into immediate liquidity.
             </p>
           </div>
 
           <nav aria-label="Footer product" className="min-w-0 lg:col-span-2">
             <FooterHeading>Product</FooterHeading>
-            <ul className="mt-4 space-y-2.5">
+            <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
               {PRODUCT_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
@@ -103,7 +104,7 @@ export function SiteFooter() {
 
           <nav aria-label="Footer resources" className="min-w-0 lg:col-span-2">
             <FooterHeading>Resources</FooterHeading>
-            <ul className="mt-4 space-y-2.5">
+            <ul className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
               {RESOURCE_LINKS.map((link) =>
                 "external" in link && link.external ? (
                   <li key={link.href}>
@@ -130,52 +131,22 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          <div className="min-w-0 lg:col-span-2">
+          <div className="col-span-2 min-w-0 lg:col-span-4">
             <FooterHeading>Contact</FooterHeading>
-            <ul className="mt-4 space-y-2.5">
-              <li>
-                <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="text-sm break-words text-koby-footer-text-secondary transition-colors hover:text-koby-footer-text"
-                >
-                  {CONTACT_EMAIL}
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div className="min-w-0 lg:col-span-2">
-            <FooterHeading>Social</FooterHeading>
-            {SOCIAL_LINKS.length > 0 ? (
-              <ul className="mt-4 space-y-2.5">
-                {SOCIAL_LINKS.map((link) => (
-                  <li key={link.href}>
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-koby-footer-text-secondary transition-colors hover:text-koby-footer-text"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm leading-relaxed text-koby-footer-muted">
-                Official channels coming soon.
-              </p>
-            )}
+            <p className="mt-3 sm:mt-4">
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="text-sm break-words text-koby-footer-text-secondary transition-colors hover:text-koby-footer-text"
+              >
+                {CONTACT_EMAIL}
+              </a>
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-1 border-t border-koby-footer-border py-5 text-left text-xs text-koby-footer-muted sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+        <div className="flex flex-col gap-1 border-t border-koby-footer-border py-4 text-left text-xs text-koby-footer-muted sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-5">
           <p>© 2026 Koby</p>
-          <p aria-live="polite">
-            {kobyConfig.chainName} · Contract:{" "}
-            {isContractConfigured() ? "configured" : "not yet deployed (pending verification)"}
-            {isNetworkConfigured() ? "" : " · Network config pending verification"}
-          </p>
+          <p>{kobyConfig.chainName}</p>
         </div>
       </Container>
     </footer>

@@ -51,7 +51,7 @@ export function LifecycleSection() {
             <SectionHeading
               eyebrow="How Koby works"
               title="From expected revenue to a completed position"
-              description="Seven stages, one shared record. Anything that changes what is owed happens in a validated onchain transaction, never in a private ledger."
+              description="From expected revenue to a completed position, on one shared record. Anything that changes what is owed happens in a validated onchain transaction, never in a private ledger."
             />
           </div>
         </Reveal>
