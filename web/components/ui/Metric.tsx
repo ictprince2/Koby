@@ -21,9 +21,9 @@ type MetricProps = {
  */
 export function Metric({ label, value, caption, provenance, className }: MetricProps) {
   return (
-    <div className={cn("flex flex-col gap-1", className)}>
+    <div className={cn("flex min-w-0 flex-col gap-1", className)}>
       <dt className="order-2 text-sm font-medium text-koby-text-secondary">{label}</dt>
-      <dd className="order-1 text-3xl font-bold tabular-nums tracking-tight text-koby-text sm:text-4xl">
+      <dd className="order-1 text-2xl font-bold break-words tabular-nums tracking-tight text-koby-text min-[480px]:text-3xl sm:text-4xl">
         {value}
       </dd>
       {caption !== undefined ? (

@@ -172,9 +172,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setPrivyAuthenticated(value);
   }, []);
 
-  // Initial discovery on mount.
+  // Initial discovery on mount. State lands in the timeout callback below,
+  // never synchronously in the effect body.
   useEffect(() => {
-    void refreshWallets();
+    const timer = window.setTimeout(() => {
+      void refreshWallets();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [refreshWallets]);
 
   // Persist the explicit selection (discovery id only — never a secret) so a

@@ -68,8 +68,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-koby-footer-border bg-koby-footer-bg">
       <Container>
-        <div className="grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-12">
-          <div className="sm:col-span-2 lg:col-span-4 lg:max-w-sm">
+        <div className="grid gap-8 py-10 text-left sm:grid-cols-2 sm:py-12 lg:grid-cols-12 lg:gap-10">
+          <div className="min-w-0 sm:col-span-2 lg:col-span-4 lg:max-w-sm">
             <Link
               href="/"
               aria-label="Koby home"
@@ -85,7 +85,7 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <nav aria-label="Footer product" className="lg:col-span-2">
+          <nav aria-label="Footer product" className="min-w-0 lg:col-span-2">
             <FooterHeading>Product</FooterHeading>
             <ul className="mt-4 space-y-2.5">
               {PRODUCT_LINKS.map((link) => (
@@ -101,7 +101,7 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          <nav aria-label="Footer resources" className="lg:col-span-2">
+          <nav aria-label="Footer resources" className="min-w-0 lg:col-span-2">
             <FooterHeading>Resources</FooterHeading>
             <ul className="mt-4 space-y-2.5">
               {RESOURCE_LINKS.map((link) =>
@@ -130,13 +130,13 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             <FooterHeading>Contact</FooterHeading>
             <ul className="mt-4 space-y-2.5">
               <li>
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
-                  className="text-sm break-all text-koby-footer-text-secondary transition-colors hover:text-koby-footer-text"
+                  className="text-sm break-words text-koby-footer-text-secondary transition-colors hover:text-koby-footer-text"
                 >
                   {CONTACT_EMAIL}
                 </a>
@@ -144,7 +144,7 @@ export function SiteFooter() {
             </ul>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-2">
             <FooterHeading>Social</FooterHeading>
             {SOCIAL_LINKS.length > 0 ? (
               <ul className="mt-4 space-y-2.5">
@@ -169,7 +169,7 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-koby-footer-border py-5 text-xs text-koby-footer-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-1 border-t border-koby-footer-border py-5 text-left text-xs text-koby-footer-muted sm:flex-row sm:items-center sm:justify-between sm:gap-2">
           <p>© 2026 Koby</p>
           <p aria-live="polite">
             {kobyConfig.chainName} · Contract:{" "}

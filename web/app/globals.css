@@ -164,6 +164,18 @@ body {
   color: var(--koby-text);
 }
 
+/*
+ * Mobile safety net: no page-level horizontal scrolling. Individual
+ * components are fixed at their own level (truncation, wrapping,
+ * viewport-capped dropdowns); this only guards against residual
+ * sub-pixel or third-party overflow. `clip` (not `hidden`) preserves
+ * sticky positioning.
+ */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* Visible keyboard focus everywhere (DESIGN.md Section 31). */
 :focus-visible {
   outline: 2px solid var(--koby-accent);

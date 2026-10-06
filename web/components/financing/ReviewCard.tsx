@@ -50,9 +50,9 @@ export function ReviewCard({
           </dd>
         </div>
         {terms.map((term) => (
-          <div key={term.label}>
+          <div key={term.label} className="min-w-0">
             <dt className="font-medium text-koby-text-secondary">{term.label}</dt>
-            <dd className="mt-0.5 tabular-nums text-koby-text">{term.value}</dd>
+            <dd className="mt-0.5 break-all tabular-nums text-koby-text">{term.value}</dd>
           </div>
         ))}
       </dl>

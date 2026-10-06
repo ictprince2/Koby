@@ -93,15 +93,15 @@ export function WalletButton() {
 
   if (status === "connected" && address) {
     return (
-      <div className="relative flex items-center gap-2">
+      <div className="relative flex max-w-full flex-wrap items-center justify-end gap-2">
         {!isCorrectNetwork ? (
           <button
             type="button"
             onClick={() => void switchToMonad()}
             title={`Connected to chain ${chainId}. Switch to ${monadConfig.chainName} (${toHexChainId(monadConfig.chainId)}).`}
-            className="inline-flex min-h-[44px] items-center rounded-koby-sm border border-koby-error bg-koby-error-subtle px-3 text-xs font-semibold text-koby-error"
+            className="inline-flex min-h-[44px] max-w-full items-center rounded-koby-sm border border-koby-error bg-koby-error-subtle px-3 text-xs font-semibold text-koby-error"
           >
-            Wrong network — switch to {monadConfig.chainName}
+            <span className="truncate">Wrong network — switch to {monadConfig.chainName}</span>
           </button>
         ) : null}
         <span
@@ -109,7 +109,7 @@ export function WalletButton() {
           aria-label={`Connected wallet ${address}${activeWallet ? ` via ${activeWallet.name}` : ""}`}
           className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-3 font-mono text-sm text-koby-text"
         >
-          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-koby-success" />
+          <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-koby-success" />
           {truncateHex(address)}
         </span>
         <button
@@ -120,14 +120,16 @@ export function WalletButton() {
               ? "Disconnect this wallet from Koby and end the Privy session. Nothing is submitted onchain."
               : "Disconnect this wallet from Koby. This only clears Koby's local state; nothing is submitted onchain."
           }
-          className="inline-flex min-h-[44px] items-center rounded-koby-sm border border-koby-border bg-koby-surface px-3 text-xs font-semibold text-koby-text-secondary transition-colors hover:text-koby-text"
+          aria-label="Disconnect wallet"
+          className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-koby-sm border border-koby-border bg-koby-surface px-3 text-xs font-semibold text-koby-text-secondary transition-colors hover:text-koby-text"
         >
-          Disconnect
+          <span aria-hidden="true" className="sm:hidden">✕</span>
+          <span className="hidden sm:inline">Disconnect</span>
         </button>
         {error ? (
           <p
             role="alert"
-            className="absolute right-0 top-12 z-10 w-64 rounded-koby-md border border-koby-error bg-koby-surface p-3 text-xs text-koby-text-secondary"
+            className="absolute top-12 right-0 z-10 w-64 max-w-[calc(100vw-2rem)] rounded-koby-md border border-koby-error bg-koby-surface p-3 text-xs text-koby-text-secondary"
           >
             {error}
           </p>
@@ -146,10 +148,23 @@ export function WalletButton() {
         disabled={busy && !chooserOpen}
         aria-expanded={chooserOpen}
         aria-haspopup={chooserOpen ? "dialog" : undefined}
-        className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm bg-koby-accent px-4 text-sm font-semibold text-koby-accent-text transition-colors hover:bg-koby-accent-hover disabled:opacity-50"
+        title="Connect a wallet"
+        className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm bg-koby-accent px-3 text-sm font-semibold text-koby-accent-text transition-colors hover:bg-koby-accent-hover disabled:opacity-50 sm:px-4"
       >
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-        {status === "connecting" ? "Connecting…" : discovering ? "Finding wallets…" : "Connect wallet"}
+        {status === "connecting" ? (
+          "Connecting…"
+        ) : discovering ? (
+          <>
+            <span className="sm:hidden">Finding…</span>
+            <span className="hidden sm:inline">Finding wallets…</span>
+          </>
+        ) : (
+          <>
+            <span className="sm:hidden">Connect</span>
+            <span className="hidden sm:inline">Connect wallet</span>
+          </>
+        )}
       </button>
       {privyAvailable ? (
         <button
@@ -161,16 +176,17 @@ export function WalletButton() {
               ? "Use your Privy wallet (embedded wallet created on login when you have none)."
               : "Log in with Privy (email or wallet). An embedded wallet is offered when you have none."
           }
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-4 text-sm font-semibold text-koby-text-secondary transition-colors hover:text-koby-text disabled:opacity-50"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-3 text-sm font-semibold text-koby-text-secondary transition-colors hover:text-koby-text disabled:opacity-50 sm:px-4"
         >
-          {privyLabel()}
+          <span className="sm:hidden">Privy</span>
+          <span className="hidden sm:inline">{privyLabel()}</span>
         </button>
       ) : null}
       {chooserOpen ? (
         <div
           role="dialog"
           aria-label="Choose a wallet to connect"
-          className="absolute right-0 top-12 z-10 w-72 rounded-koby-md border border-koby-border bg-koby-surface p-2 shadow-lg"
+          className="absolute top-12 right-0 z-10 w-72 max-w-[calc(100vw-2rem)] rounded-koby-md border border-koby-border bg-koby-surface p-2 shadow-lg"
         >
           <p className="px-2 pb-1 pt-1 text-xs font-semibold text-koby-text-secondary">
             Choose a wallet ({wallets.length} detected)
@@ -208,7 +224,7 @@ export function WalletButton() {
       ) : error ? (
         <p
           role="alert"
-          className="absolute right-0 top-12 z-10 w-64 rounded-koby-md border border-koby-error bg-koby-surface p-3 text-xs text-koby-text-secondary"
+          className="absolute top-12 right-0 z-10 w-64 max-w-[calc(100vw-2rem)] rounded-koby-md border border-koby-error bg-koby-surface p-3 text-xs text-koby-text-secondary"
         >
           {error}
         </p>

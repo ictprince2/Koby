@@ -41,7 +41,15 @@ const DEFAULT_BASE_URL = "https://api.moonshot.ai/v1";
  * discontinued 2026-08-31. Override via KIMI_MODEL (e.g. kimi-k3).
  */
 const DEFAULT_MODEL = "kimi-k2.6";
-const TIMEOUT_MS = 25_000;
+/**
+ * Per-provider network budget. The route runs both live attempts
+ * concurrently (OpenRouter result preferred), so the worst-case added
+ * latency stays near a single budget — comfortably inside serverless
+ * function limits on hosted deployments. A slow or unreachable provider
+ * degrades to the labeled deterministic fallback instead of timing out
+ * the whole endpoint.
+ */
+const TIMEOUT_MS = 8_000;
 const MAX_TOKENS = 1500;
 
 export type KimiAnalysis = {

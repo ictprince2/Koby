@@ -316,7 +316,7 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
                   <p className="font-semibold text-koby-text">{e.name} <span className="font-normal text-koby-text-muted">· block {e.blockNumber.toString()}</span></p>
                   <dl className="mt-1 grid gap-1 text-koby-text-secondary sm:grid-cols-2">
                     {Object.entries(e.args).filter(([k]) => k !== "id" && k !== "timestamp").map(([k, v]) => (
-                      <div key={k}><dt className="inline font-medium">{k}: </dt><dd className="inline font-mono text-[13px]">{typeof v === "bigint" ? v.toString() : v}</dd></div>
+                      <div key={k} className="min-w-0"><dt className="inline font-medium">{k}: </dt><dd className="inline font-mono text-[13px] break-all">{typeof v === "bigint" ? v.toString() : v}</dd></div>
                     ))}
                   </dl>
                   {e.txHash ? (

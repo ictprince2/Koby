@@ -22,7 +22,7 @@ export function PositionCard({ position, link }: { position: Position; link?: bo
         <ProvenanceTag source="Onchain" />
         <span className="font-mono text-xs text-koby-text-muted">#{position.id.toString()}</span>
       </div>
-      <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <Metric label="Financing" value={formatBaseUnits(position.principal, USDC_DECIMALS)} provenance="Onchain" />
         <Metric label="Obligation" value={formatBaseUnits(position.obligation, USDC_DECIMALS)} provenance="Onchain" />
         <Metric label="Repaid" value={formatBaseUnits(position.repaid, USDC_DECIMALS)} provenance="Onchain" />

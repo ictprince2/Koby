@@ -18,20 +18,20 @@ export function LandingHero() {
     <section aria-labelledby="koby-hero-heading" className="relative overflow-hidden">
       <StrataField bands={7} contours />
 
-      <Container className="relative py-14 sm:py-20">
-        <div className="grid items-center gap-12 lg:grid-cols-12">
+      <Container className="relative py-10 sm:py-14">
+        <div className="grid items-center gap-8 lg:grid-cols-12 lg:gap-12">
           <Reveal className="lg:col-span-7">
             <h1
               id="koby-hero-heading"
-              className="max-w-[16ch] text-5xl font-bold tracking-tight text-koby-text sm:text-6xl"
+              className="max-w-[16ch] text-4xl font-bold tracking-tight text-koby-text sm:text-5xl"
             >
               Koby turns future business cash flow into programmable liquidity.
             </h1>
-            <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-koby-text-secondary">
+            <p className="mt-4 max-w-[52ch] text-base leading-relaxed text-koby-text-secondary sm:text-lg">
               Future revenue, analyzed and financed on transparent terms, settled onchain
               with programmable repayment.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Button href="/marketplace" size="lg">
                 Explore financing opportunities
               </Button>
@@ -39,7 +39,7 @@ export function LandingHero() {
                 Create financing request
               </Button>
             </div>
-            <p className="mt-8 border-t border-koby-border-strong pt-4 font-mono text-[11px] tracking-[0.14em] text-koby-text-muted uppercase">
+            <p className="mt-6 border-t border-koby-border-strong pt-4 font-mono text-[11px] tracking-[0.14em] text-koby-text-muted uppercase">
               Estimates above the line. Contracts below it.
             </p>
           </Reveal>
@@ -50,13 +50,13 @@ export function LandingHero() {
               className="koby-frame relative overflow-hidden rounded-koby-lg border border-koby-border-strong bg-koby-surface"
             >
               <StrataField bands={6} fault="vertical" />
-              <div className="relative flex h-[480px] flex-col justify-between p-6 sm:h-[540px] sm:p-7">
+              <div className="relative flex h-[400px] flex-col justify-between p-6 sm:h-[460px] sm:p-6">
                 <div>
                   <p className="text-xs text-koby-text-muted">Illustrative example</p>
                   <div className="mt-3">
                     <TechnicalLabel>Future receivables - estimate</TechnicalLabel>
                   </div>
-                  <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-koby-text-secondary sm:text-5xl">
+                  <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-koby-text-secondary sm:text-4xl">
                     $100,000
                   </p>
                   <p className="mt-1 text-xs text-koby-text-muted">
@@ -66,7 +66,7 @@ export function LandingHero() {
 
                 <div className="border-t border-koby-border pt-5">
                   <TechnicalLabel>Financing</TechnicalLabel>
-                  <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text">
+                  <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-koby-text sm:text-5xl">
                     $70,000
                   </p>
                   <p className="mt-1 text-xs text-koby-text-muted">

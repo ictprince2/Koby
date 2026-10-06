@@ -1,36 +1,36 @@
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
-import { SiteNav } from "@/components/layout/SiteNav";
+import { SiteNav, MobileNavMenu } from "@/components/layout/SiteNav";
 import { WalletButton } from "@/components/wallet/WalletButton";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Button } from "@/components/ui/Button";
 
 /**
  * SiteHeader — sticky structural chrome (DESIGN.md Sections 10/20).
- * Wordmark + primary nav + create action + wallet area + theme toggle.
- * Bottom boundary is a segmented strata rule, not a plain border.
+ * Wordmark left, primary nav beside it on desktop, actions right.
+ * On mobile the menu control sits at the top-right; the dropdown is
+ * anchored to it so it can never overflow the viewport.
  */
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 bg-koby-bg">
       <Container>
-        <div className="flex h-16 items-center justify-between gap-3">
-          <div className="flex items-center gap-6">
+        <div className="flex min-h-16 items-center justify-between gap-2 py-2 sm:h-16 sm:py-0">
+          <div className="flex min-w-0 items-center gap-4 md:gap-6">
             <Link
               href="/"
               aria-label="Koby home"
-              className="text-lg font-bold tracking-tight text-koby-text"
+              className="shrink-0 text-lg font-bold tracking-tight text-koby-text"
             >
               Koby
             </Link>
             <SiteNav />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <Button href="/financing/create" variant="secondary" size="sm" className="hidden sm:inline-flex">
               Create financing request
             </Button>
-            <ThemeToggle />
             <WalletButton />
+            <MobileNavMenu />
           </div>
         </div>
       </Container>

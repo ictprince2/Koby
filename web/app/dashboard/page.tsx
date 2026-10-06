@@ -77,7 +77,7 @@ export default function DashboardPage() {
           />
         ) : (
           <>
-            <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
               <Metric label="Active financing" value={formatBaseUnits(financed, USDC_DECIMALS)} provenance="Onchain" />
               <Metric label="Repaid" value={formatBaseUnits(repaid, USDC_DECIMALS)} provenance="Onchain" />
               <Metric label="Outstanding" value={formatBaseUnits(outstanding, USDC_DECIMALS)} provenance="Onchain" />

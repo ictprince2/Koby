@@ -7,6 +7,9 @@ import {
 } from "@/lib/analysis";
 import { getKimiAnalysis, getOpenRouterAnalysis, KIMI_METHODOLOGY_VERSION, OPENROUTER_METHODOLOGY_VERSION } from "@/services/ai";
 
+/** Node.js runtime: provider fetches use AbortController timeouts. */
+export const runtime = "nodejs";
+
 /**
  * POST /api/analyze — server-side cash-flow assessment boundary
  * (ARCHITECTURE.md Sections 2/11, AI.md).
@@ -86,39 +89,42 @@ export async function POST(request: Request) {
   // labeled fallback below. The financing ratio and advisory eligible amount
   // stay deterministic (integer math in analyzeCashFlow); only the assessment
   // and detail come from a model — and only as a validated whole.
-  try {
-    const openrouter = await getOpenRouterAnalysis(input);
-    if (openrouter !== null) {
-      const fallback = analyzeCashFlow(input);
-      return NextResponse.json({
-        assessment: openrouter.assessment,
-        financingRatioBps: fallback.financingRatioBps,
-        eligibleAmountUsd: fallback.eligibleAmountUsd,
-        methodologyVersion: OPENROUTER_METHODOLOGY_VERSION,
-        model: `${openrouter.model} (OpenRouter AI Assessment)`,
-        detail: openrouter.detail,
-        provenance: "AI Analysis" as const,
-        source: "openrouter" as const,
-        label: "OpenRouter AI Assessment" as const,
-      });
-    }
-    const kimi = await getKimiAnalysis(input);
-    if (kimi !== null) {
-      const fallback = analyzeCashFlow(input);
-      return NextResponse.json({
-        assessment: kimi.assessment,
-        financingRatioBps: fallback.financingRatioBps,
-        eligibleAmountUsd: fallback.eligibleAmountUsd,
-        methodologyVersion: KIMI_METHODOLOGY_VERSION,
-        model: `${kimi.model} (Kimi AI Assessment)`,
-        detail: kimi.detail,
-        provenance: "AI Analysis" as const,
-        source: "kimi" as const,
-        label: "Kimi AI Assessment" as const,
-      });
-    }
-  } catch {
-    // Fall through to the deterministic fallback.
+  //
+  // Both providers are attempted concurrently with a tight per-provider
+  // budget (services/ai.ts): the OpenRouter result is still preferred when
+  // both succeed, but a slow provider can no longer push the route past
+  // serverless execution limits on hosted deployments.
+  const [openrouter, kimi] = await Promise.all([
+    getOpenRouterAnalysis(input).catch(() => null),
+    getKimiAnalysis(input).catch(() => null),
+  ]);
+  if (openrouter !== null) {
+    const fallback = analyzeCashFlow(input);
+    return NextResponse.json({
+      assessment: openrouter.assessment,
+      financingRatioBps: fallback.financingRatioBps,
+      eligibleAmountUsd: fallback.eligibleAmountUsd,
+      methodologyVersion: OPENROUTER_METHODOLOGY_VERSION,
+      model: `${openrouter.model} (OpenRouter AI Assessment)`,
+      detail: openrouter.detail,
+      provenance: "AI Analysis" as const,
+      source: "openrouter" as const,
+      label: "OpenRouter AI Assessment" as const,
+    });
+  }
+  if (kimi !== null) {
+    const fallback = analyzeCashFlow(input);
+    return NextResponse.json({
+      assessment: kimi.assessment,
+      financingRatioBps: fallback.financingRatioBps,
+      eligibleAmountUsd: fallback.eligibleAmountUsd,
+      methodologyVersion: KIMI_METHODOLOGY_VERSION,
+      model: `${kimi.model} (Kimi AI Assessment)`,
+      detail: kimi.detail,
+      provenance: "AI Analysis" as const,
+      source: "kimi" as const,
+      label: "Kimi AI Assessment" as const,
+    });
   }
 
   const result = analyzeCashFlow(input);

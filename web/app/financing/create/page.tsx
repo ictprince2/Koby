@@ -327,7 +327,7 @@ export default function CreateFinancingPage() {
             <div className="flex flex-wrap items-center gap-2">
               <ProvenanceTag source="User Provided" />
             </div>
-            <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <Metric label="Future receivables" value={`$${formatCentsToUsd(parseUsdToCents(receivables) ?? 0n)}`} provenance="User Provided" />
               <Metric label="Requested liquidity" value={`$${formatCentsToUsd(parseUsdToCents(requested) ?? 0n)}`} provenance="User Provided" />
               <Metric label="Advisory eligible" value={`$${analysis.eligibleAmountUsd}`} caption="Assessment guidance, not an offer" />

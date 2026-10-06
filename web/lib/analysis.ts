@@ -416,7 +416,6 @@ function buildFallbackDetail(
     concentrationNotes = "No customer-concentration information was provided, so concentration risk cannot be assessed.";
   }
 
-  let repaymentCapacity: string;
   const capacityParts: string[] = [];
   capacityParts.push(
     ratioBps > 9000
@@ -432,7 +431,7 @@ function buildFallbackDetail(
   } else {
     capacityParts.push("No existing obligations were disclosed; capacity is inferred from the requested share of receivables alone.");
   }
-  repaymentCapacity = capacityParts.join(" ");
+  const repaymentCapacity = capacityParts.join(" ");
 
   const missingInfo: string[] = [];
   if (monthly === null) missingInfo.push("Average monthly revenue breakdown");
