@@ -7,13 +7,14 @@ import { toHexChainId, useWallet } from "@/hooks/useWallet";
 
 /**
  * WalletButton — the ONLY wallet connection UI in Koby (USER_FLOW.md
- * Section 5). Privy is the single connection authority: this button opens
- * the real Privy login modal (wallet selection, embedded wallets, and
+ * Section 5). Privy is the primary connection authority: the main button
+ * opens the real Privy login modal (wallet selection, embedded wallets, and
  * multi-wallet support all live inside Privy), shows the connected address,
- * and disconnects by ending the Privy session. Never fakes a connection,
- * an address, or a wallet. On the wrong network it blocks transaction
- * actions and offers a switch. There is no second connector and no wallet
- * chooser dialog — wallet selection happens in the Privy modal.
+ * and disconnects by ending the session. A thin injected-wallet fallback
+ * (compact icon button, first detected wallet only — never a chooser
+ * dialog) covers installed wallets when Privy is unavailable or the user
+ * prefers it. Never fakes a connection, an address, or a wallet. On the
+ * wrong network it blocks transaction actions and offers a switch.
  */
 export function WalletButton() {
   const {
@@ -23,19 +24,43 @@ export function WalletButton() {
     isCorrectNetwork,
     error,
     walletLabel,
+    injectedLabel,
+    privyAvailable,
     connectPrivy,
+    connectInjected,
     disconnect,
     switchToMonad,
   } = useWallet();
   const [busy, setBusy] = useState(false);
+  const [injectedBusy, setInjectedBusy] = useState(false);
 
   async function onConnectClick() {
-    if (busy || status === "connecting") return;
+    if (busy || injectedBusy || status === "connecting") return;
+    // Without Privy, the primary button is the injected fallback itself.
+    if (!privyAvailable) {
+      setInjectedBusy(true);
+      try {
+        await connectInjected();
+      } finally {
+        setInjectedBusy(false);
+      }
+      return;
+    }
     setBusy(true);
     try {
       await connectPrivy();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onInjectedClick() {
+    if (busy || injectedBusy || status === "connecting") return;
+    setInjectedBusy(true);
+    try {
+      await connectInjected();
+    } finally {
+      setInjectedBusy(false);
     }
   }
 
@@ -82,7 +107,7 @@ export function WalletButton() {
     );
   }
 
-  const showBusy = busy || status === "connecting";
+  const showBusy = busy || injectedBusy || status === "connecting";
 
   return (
     <div className="relative flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
@@ -90,13 +115,17 @@ export function WalletButton() {
         type="button"
         onClick={() => void onConnectClick()}
         disabled={showBusy}
-        title="Connect with Privy (email or wallet)"
+        title={
+          privyAvailable
+            ? "Connect with Privy (email or wallet)"
+            : `Connect with ${injectedLabel ?? "injected wallet"}`
+        }
         className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-koby-sm bg-koby-accent px-3 text-sm font-semibold whitespace-nowrap text-koby-accent-text transition-colors hover:bg-koby-accent-hover disabled:opacity-50 sm:px-4"
       >
         <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
         {status === "connecting" ? (
           "Connecting…"
-        ) : busy ? (
+        ) : busy || injectedBusy ? (
           <>
             <span className="sm:hidden">Opening…</span>
             <span className="hidden sm:inline">Opening wallet options…</span>
@@ -108,6 +137,29 @@ export function WalletButton() {
           </>
         )}
       </button>
+      {/*
+        Thin injected fallback: one compact control for the first detected
+        installed wallet. Rendered only when Privy is the primary path and
+        an injected wallet actually exists — never a chooser dialog, never
+        a second primary button. Fixed 44px size keeps the mobile header a
+        single row.
+      */}
+      {privyAvailable && injectedLabel ? (
+        <button
+          type="button"
+          onClick={() => void onInjectedClick()}
+          disabled={showBusy}
+          title={`Connect with ${injectedLabel} (installed wallet)`}
+          aria-label={`Connect with ${injectedLabel} (installed wallet)`}
+          className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-koby-sm border border-koby-border text-koby-text-secondary transition-colors hover:text-koby-text disabled:opacity-50"
+        >
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="1.5" y="4" width="15" height="11" rx="2" />
+            <path d="M1.5 7h15" />
+            <circle cx="13" cy="11.5" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+      ) : null}
       {error ? (
         <p
           role="alert"

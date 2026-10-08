@@ -64,6 +64,10 @@ export function OpportunityPreview() {
                 to see live opportunities when positions exist. Empty until then, by
                 design.
               </p>
+              <p className="mt-4 border-t border-koby-border pt-4 font-mono text-[11px] leading-relaxed tracking-[0.08em] text-koby-text-muted uppercase">
+                Example context — Acme Logistics · $100,000 expected receivables →
+                $70,000 financing → Monad settlement → validated repayment
+              </p>
             </Reveal>
           </div>
 

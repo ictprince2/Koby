@@ -3,27 +3,31 @@
 /**
  * Wallet abstraction (ARCHITECTURE.md Section 9).
  *
- * Privy is the SINGLE wallet connection authority for Koby: connect UI,
+ * Privy is the PRIMARY wallet connection authority for Koby: connect UI,
  * wallet selection, connection state, disconnect, supported wallets, and
- * account identity all come from Privy (@privy-io/react-auth), consumed
- * here via usePrivy/useWallets/useCreateWallet. There is no second
- * connector — no wagmi, no RainbowKit/ConnectKit/Web3Modal, no custom
- * injected-wallet discovery, no wallet chooser UI. The picked Privy-session
- * wallet (embedded first, otherwise the first ethereum wallet) is adapted
+ * account identity come from Privy (@privy-io/react-auth) via
+ * usePrivy/useWallets/useCreateWallet. EIP-6963 injected wallets are a
+ * THIN fallback behind the same interface (PRD §16 / ARCH §9 / MONAD §10's
+ * provider-agnostic requirement): discovery only, no selection framework,
+ * no persistence, no chooser UI, no wallet SDK. The picked Privy-session
+ * wallet (embedded first, otherwise the first ethereum wallet) — or the
+ * first discovered injected wallet when the user chooses it — is adapted
  * to Koby's EIP-1193 interface for the existing viem transaction path
  * (services/financing.ts), which is untouched.
  *
  * Koby has no account layer: the connected address is the only identity.
  * Nothing here hard-codes a wallet or an address, and connection state is
- * never mocked — it derives from the live Privy session. When no Privy App
- * ID is configured, the context honestly reports that connection is
- * unavailable instead of falling back to a parallel connection system.
+ * never mocked — it derives from the live Privy session or a live
+ * injected provider. When neither is available, the context honestly
+ * reports that connection is unavailable instead of falling back to
+ * anything else.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useCreateWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { monadConfig } from "@/lib/monad";
 import { adaptEip1193Provider, isPrivyConfigured, type Eip1193Provider } from "@/lib/privy";
+import { discoverInjectedWallets, type DiscoveredWallet } from "@/lib/wallets";
 
 export type { Eip1193Provider };
 
@@ -47,17 +51,29 @@ type WalletContextValue = {
   isCorrectNetwork: boolean;
   error: string | null;
   /**
-   * Human-readable label for the active Privy-session wallet
-   * ("Privy embedded wallet" or "Privy (<connector>)"). Null when none.
+   * Human-readable label for the active wallet ("Privy embedded wallet",
+   * "Privy (<connector>)", or the injected wallet's own name). Null when none.
    */
   walletLabel: string | null;
+  /**
+   * Name of the first discovered injected wallet, or null when none is
+   * installed. Drives the thin fallback affordance; never a full list UI.
+   */
+  injectedLabel: string | null;
+  /** True when a Privy App ID is configured (Privy onboarding available). */
+  privyAvailable: boolean;
   /**
    * User-initiated Privy onboarding: opens the Privy login modal when logged
    * out, creates the embedded wallet when logged in without one. When a
    * wallet is already present, connection state syncs automatically.
    */
   connectPrivy: () => Promise<void>;
-  /** End the Privy session and clear local wallet state. */
+  /**
+   * User-initiated injected fallback: discovers installed wallets and
+   * connects the first one found. Secondary to Privy in every respect.
+   */
+  connectInjected: () => Promise<void>;
+  /** End the session (Privy logout where applicable) and clear local state. */
   disconnect: () => void;
   switchToMonad: () => Promise<void>;
   /** Raw provider for transaction submission. Null unless connected. */
@@ -67,23 +83,150 @@ type WalletContextValue = {
 const WalletContext = createContext<WalletContextValue | null>(null);
 
 /**
- * Privy-backed wallet state. Rendered only under a PrivyProvider ancestor
- * (see WalletProvider below and components/providers/Providers).
+ * Shared address/chain sync + event subscriptions for whichever EIP-1193
+ * provider is active. Re-runs when the provider changes; cleanup
+ * unsubscribes. The empty-provider reset lands in a timeout callback,
+ * never synchronously in the effect body.
+ */
+function useSyncedChain(provider: Eip1193Provider | null): {
+  address: string | null;
+  chainId: number | null;
+  setAddress: (v: string | null) => void;
+  setChainId: (v: number | null) => void;
+} {
+  const [address, setAddress] = useState<string | null>(null);
+  const [chainId, setChainId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!provider) {
+      const timer = window.setTimeout(() => {
+        setAddress(null);
+        setChainId(null);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    let cancelled = false;
+    // Initial sync: async wallet reads; state lands in the callback below.
+    Promise.all([
+      provider.request({ method: "eth_accounts" }),
+      provider.request({ method: "eth_chainId" }),
+    ])
+      .then(([accounts, chainHex]) => {
+        if (cancelled) return;
+        const list = accounts as string[];
+        setAddress(list[0] ?? null);
+        setChainId(hexToChainId(chainHex as string));
+      })
+      .catch(() => {
+        // Keep prior state; a failed silent refresh is not shown as an error.
+      });
+    const onAccounts = (...args: unknown[]) => {
+      // Account switch mid-flow: re-validate dependents (SECURITY.md 8).
+      const accounts = args[0] as string[];
+      setAddress(accounts[0] ?? null);
+    };
+    const onChain = (...args: unknown[]) => {
+      setChainId(hexToChainId(args[0] as string));
+    };
+    // Subscribe with the provider as receiver: wallet providers implement
+    // `on`/`removeListener` as instance methods that read internal state
+    // via `this`. Detaching the method loses that context and throws.
+    // Binding preserves it. Both methods are required so every subscription
+    // has a matching unsubscription.
+    const subscribe =
+      typeof provider.on === "function" ? provider.on.bind(provider) : null;
+    const unsubscribe =
+      typeof provider.removeListener === "function"
+        ? provider.removeListener.bind(provider)
+        : null;
+    if (!subscribe || !unsubscribe) return;
+    subscribe("accountsChanged", onAccounts);
+    subscribe("chainChanged", onChain);
+    return () => {
+      cancelled = true;
+      unsubscribe("accountsChanged", onAccounts);
+      unsubscribe("chainChanged", onChain);
+    };
+  }, [provider]);
+
+  return { address, chainId, setAddress, setChainId };
+}
+
+/** Shared network-switch implementation over any active provider. */
+async function requestSwitchToMonad(
+  provider: Eip1193Provider | null,
+  onChainId: (id: number | null) => void,
+  onError: (message: string | null) => void,
+): Promise<void> {
+  if (!provider) {
+    onError("No wallet found in this browser.");
+    return;
+  }
+  onError(null);
+  const target = toHexChainId(monadConfig.chainId);
+  try {
+    await provider.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: target }],
+    });
+    const chainHex = (await provider.request({ method: "eth_chainId" })) as string;
+    onChainId(hexToChainId(chainHex));
+  } catch (e) {
+    const err = e as { code?: number; message?: string };
+    if (err?.code === 4902) {
+      // Network unknown to the wallet: offer to add it.
+      try {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: target,
+              chainName: monadConfig.chainName,
+              nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
+              rpcUrls: [monadConfig.rpcUrl],
+              blockExplorerUrls: [monadConfig.explorerUrl],
+            },
+          ],
+        });
+        const chainHex = (await provider.request({ method: "eth_chainId" })) as string;
+        onChainId(hexToChainId(chainHex));
+        return;
+      } catch {
+        onError("The network could not be added. Add Monad Testnet manually and try again.");
+        return;
+      }
+    }
+    if (/rejected|denied|4001/i.test(err?.message ?? "")) return;
+    onError("Could not switch networks. Switch your wallet manually and try again.");
+  }
+}
+
+/** Thin fallback discovery: first installed wallet, or null. No UI, no state machine. */
+async function firstInjected(): Promise<DiscoveredWallet | null> {
+  const found = await discoverInjectedWallets();
+  return found[0] ?? null;
+}
+
+/**
+ * Privy-backed wallet state with thin injected fallback. Rendered only
+ * under a PrivyProvider ancestor (see WalletProvider below and
+ * components/providers/Providers).
  */
 function PrivyBackedWallet({ children }: { children: ReactNode }) {
   const { ready, authenticated, login, logout } = usePrivy();
   const { wallets } = useWallets();
   const { createWallet } = useCreateWallet();
 
-  const [address, setAddress] = useState<string | null>(null);
-  const [chainId, setChainId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [injecting, setInjecting] = useState(false);
+  const [preferInjected, setPreferInjected] = useState(false);
   const [entry, setEntry] = useState<{
     walletAddress: string;
     label: string;
     provider: Eip1193Provider;
   } | null>(null);
+  const [injected, setInjected] = useState<DiscoveredWallet | null>(null);
 
   // Prefer the embedded wallet; fall back to the first Privy-session
   // ethereum wallet (e.g. an external wallet connected through Privy).
@@ -141,62 +284,29 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
     };
   }, [authenticated, pickedAddress, wallets]);
 
-  // Silent sync + event subscriptions follow the Privy-session provider.
-  // Re-runs when the entry changes; cleanup unsubscribes. The empty-entry
-  // reset lands in the timeout callback below, never synchronously in the
-  // effect body.
+  // Passive fallback discovery on mount (read-only; never connects alone).
+  // State lands in the promise callback below.
   useEffect(() => {
-    const activeProvider = entry?.provider ?? null;
-    if (!activeProvider) {
-      const timer = window.setTimeout(() => {
-        setAddress(null);
-        setChainId(null);
-      }, 0);
-      return () => window.clearTimeout(timer);
-    }
     let cancelled = false;
-    // Initial sync: async wallet reads; state lands in the callback below.
-    Promise.all([
-      activeProvider.request({ method: "eth_accounts" }),
-      activeProvider.request({ method: "eth_chainId" }),
-    ])
-      .then(([accounts, chainHex]) => {
-        if (cancelled) return;
-        const list = accounts as string[];
-        setAddress(list[0] ?? null);
-        setChainId(hexToChainId(chainHex as string));
-      })
-      .catch(() => {
-        // Keep prior state; a failed silent refresh is not shown as an error.
-      });
-    const onAccounts = (...args: unknown[]) => {
-      // Account switch mid-flow: re-validate dependents (SECURITY.md 8).
-      const accounts = args[0] as string[];
-      setAddress(accounts[0] ?? null);
-    };
-    const onChain = (...args: unknown[]) => {
-      setChainId(hexToChainId(args[0] as string));
-    };
-    // Subscribe with the provider as receiver: wallet providers implement
-    // `on`/`removeListener` as instance methods that read internal state
-    // via `this`. Detaching the method loses that context and throws.
-    // Binding preserves it. Both methods are required so every subscription
-    // has a matching unsubscription.
-    const subscribe =
-      typeof activeProvider.on === "function" ? activeProvider.on.bind(activeProvider) : null;
-    const unsubscribe =
-      typeof activeProvider.removeListener === "function"
-        ? activeProvider.removeListener.bind(activeProvider)
-        : null;
-    if (!subscribe || !unsubscribe) return;
-    subscribe("accountsChanged", onAccounts);
-    subscribe("chainChanged", onChain);
+    void firstInjected().then((found) => {
+      if (!cancelled) setInjected(found);
+    });
     return () => {
       cancelled = true;
-      unsubscribe("accountsChanged", onAccounts);
-      unsubscribe("chainChanged", onChain);
     };
-  }, [entry]);
+  }, []);
+
+  // Explicit choice wins; otherwise Privy first, injected as fallback.
+  // Memoized so downstream callbacks keep stable dependencies.
+  const active = useMemo(
+    () =>
+      preferInjected && injected
+        ? { label: injected.name, provider: injected.provider }
+        : (entry ?? (injected ? { label: injected.name, provider: injected.provider } : null)),
+    [preferInjected, injected, entry],
+  );
+
+  const { address, chainId, setAddress, setChainId } = useSyncedChain(active?.provider ?? null);
 
   const connectPrivy = useCallback(async () => {
     setError(null);
@@ -217,7 +327,7 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
           setCreating(false);
         }
       }
-      // Entry present: the sync effect above is already converging on it.
+      // Entry present: the sync above is already converging on it.
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       // A pre-existing embedded wallet surfacing late is not an error.
@@ -228,6 +338,40 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
     }
   }, [authenticated, entry, login, createWallet]);
 
+  const connectInjected = useCallback(async () => {
+    setError(null);
+    setInjecting(true);
+    try {
+      const found = await firstInjected();
+      if (!found) {
+        setError("No injected wallet found in this browser. Install a wallet (e.g. MetaMask) or continue with Privy.");
+        return;
+      }
+      setInjected(found);
+      setPreferInjected(true);
+      const accounts = (await found.provider.request({ method: "eth_requestAccounts" })) as string[];
+      if (!accounts[0]) {
+        setPreferInjected(false);
+        return;
+      }
+      // Explicit user connect: set state directly. The shared sync below is
+      // keyed on provider identity, which does not change when merely
+      // switching preference to an already-discovered provider.
+      const chainHex = (await found.provider.request({ method: "eth_chainId" })) as string;
+      setAddress(accounts[0]);
+      setChainId(hexToChainId(chainHex));
+      // Address/chain keep converging through the shared sync above.
+    } catch (e) {
+      setPreferInjected(false);
+      const message = e instanceof Error ? e.message : "";
+      // User declining connection is a clean return, not an app error.
+      if (/rejected|denied|4001/i.test(message)) return;
+      setError("Injected wallet connection failed. Check your wallet and try again.");
+    } finally {
+      setInjecting(false);
+    }
+  }, [setAddress, setChainId]);
+
   const disconnect = useCallback(() => {
     // Ending the Privy session is programmatic. Clearing state nulls the
     // context provider, so no financing transaction can proceed.
@@ -235,56 +379,16 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
     setAddress(null);
     setChainId(null);
     setEntry(null);
+    setPreferInjected(false);
     setError(null);
-  }, [logout]);
+  }, [logout, setAddress, setChainId]);
 
   const switchToMonad = useCallback(async () => {
-    const activeProvider = entry?.provider ?? null;
-    if (!activeProvider) {
-      setError("No wallet found in this browser.");
-      return;
-    }
-    setError(null);
-    const target = toHexChainId(monadConfig.chainId);
-    try {
-      await activeProvider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: target }],
-      });
-      const chainHex = (await activeProvider.request({ method: "eth_chainId" })) as string;
-      setChainId(hexToChainId(chainHex));
-    } catch (e) {
-      const err = e as { code?: number; message?: string };
-      if (err?.code === 4902) {
-        // Network unknown to the wallet: offer to add it.
-        try {
-          await activeProvider.request({
-            method: "wallet_addEthereumChain",
-            params: [
-              {
-                chainId: target,
-                chainName: monadConfig.chainName,
-                nativeCurrency: { name: "MON", symbol: "MON", decimals: 18 },
-                rpcUrls: [monadConfig.rpcUrl],
-                blockExplorerUrls: [monadConfig.explorerUrl],
-              },
-            ],
-          });
-          const chainHex = (await activeProvider.request({ method: "eth_chainId" })) as string;
-          setChainId(hexToChainId(chainHex));
-          return;
-        } catch {
-          setError("The network could not be added. Add Monad Testnet manually and try again.");
-          return;
-        }
-      }
-      if (/rejected|denied|4001/i.test(err?.message ?? "")) return;
-      setError("Could not switch networks. Switch your wallet manually and try again.");
-    }
-  }, [entry]);
+    await requestSwitchToMonad(active?.provider ?? null, setChainId, setError);
+  }, [active, setChainId]);
 
   const status: WalletStatus =
-    !ready || creating ? "connecting" : address && entry ? "connected" : "disconnected";
+    !ready || creating || injecting ? "connecting" : address && active ? "connected" : "disconnected";
 
   const value = useMemo<WalletContextValue>(
     () => ({
@@ -293,47 +397,104 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
       chainId,
       isCorrectNetwork: chainId === monadConfig.chainId,
       error,
-      walletLabel: entry?.label ?? null,
+      walletLabel: active?.label ?? null,
+      injectedLabel: injected?.name ?? null,
+      privyAvailable: true,
       connectPrivy,
+      connectInjected,
       disconnect,
       switchToMonad,
-      provider: status === "connected" && address && entry ? entry.provider : null,
+      provider: status === "connected" && address && active ? active.provider : null,
     }),
-    [status, address, chainId, error, entry, connectPrivy, disconnect, switchToMonad],
+    [status, address, chainId, error, active, injected, connectPrivy, connectInjected, disconnect, switchToMonad],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 
 /**
- * Wallet state when Privy is not configured. Reports honestly that wallet
- * connection is unavailable — never a mocked connection, never a parallel
- * fallback connector.
+ * Injected-only wallet state for builds without a Privy App ID. Same
+ * interface, same honesty: reports connected only for a live provider.
  */
-function UnavailableWallet({ children }: { children: ReactNode }) {
+function InjectedOnlyWallet({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [injected, setInjected] = useState<DiscoveredWallet | null>(null);
+  const [chosen, setChosen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void firstInjected().then((found) => {
+      if (!cancelled) setInjected(found);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const activeProvider = chosen && injected ? injected.provider : null;
+  const { address, chainId, setAddress, setChainId } = useSyncedChain(activeProvider);
+
+  const connectInjected = useCallback(async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const found = await firstInjected();
+      if (!found) {
+        setError("No injected wallet found in this browser. Install a wallet (e.g. MetaMask) to continue.");
+        return;
+      }
+      setInjected(found);
+      const accounts = (await found.provider.request({ method: "eth_requestAccounts" })) as string[];
+      if (accounts[0]) setChosen(true);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "";
+      if (/rejected|denied|4001/i.test(message)) return;
+      setError("Injected wallet connection failed. Check your wallet and try again.");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const disconnect = useCallback(() => {
+    setAddress(null);
+    setChainId(null);
+    setChosen(false);
+    setError(null);
+  }, [setAddress, setChainId]);
+
+  const switchToMonad = useCallback(async () => {
+    await requestSwitchToMonad(activeProvider, setChainId, setError);
+  }, [activeProvider, setChainId]);
+
+  const status: WalletStatus = busy ? "connecting" : address && activeProvider ? "connected" : "disconnected";
+
   const value = useMemo<WalletContextValue>(
     () => ({
-      status: "disconnected",
-      address: null,
-      chainId: null,
-      isCorrectNetwork: false,
+      status,
+      address,
+      chainId,
+      isCorrectNetwork: chainId === monadConfig.chainId,
       error,
-      walletLabel: null,
+      walletLabel: activeProvider && injected ? injected.name : null,
+      injectedLabel: injected?.name ?? null,
+      privyAvailable: false,
       connectPrivy: async () => {
         setError("Wallet connection is not available in this build (Privy is not configured).");
       },
-      disconnect: () => {},
-      switchToMonad: async () => {},
-      provider: null,
+      connectInjected,
+      disconnect,
+      switchToMonad,
+      provider: status === "connected" && address && activeProvider ? activeProvider : null,
     }),
-    [error],
+    [status, address, chainId, error, activeProvider, injected, connectInjected, disconnect, switchToMonad],
   );
+
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  if (!isPrivyConfigured()) return <UnavailableWallet>{children}</UnavailableWallet>;
+  if (!isPrivyConfigured()) return <InjectedOnlyWallet>{children}</InjectedOnlyWallet>;
   return <PrivyBackedWallet>{children}</PrivyBackedWallet>;
 }
 

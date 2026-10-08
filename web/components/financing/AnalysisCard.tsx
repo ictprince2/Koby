@@ -1,4 +1,4 @@
-import { Panel } from "@/components/ui/Card";
+import { ProvenanceTag } from "@/components/ui/ProvenanceTag";
 import type { AnalysisResponse } from "@/lib/analysis";
 
 /**
@@ -7,6 +7,12 @@ import type { AnalysisResponse } from "@/lib/analysis";
  * detail envelope. The heading names the live provider engine when live
  * output is shown, and the built-in assessment otherwise — advisory only,
  * never terms, never funds.
+ *
+ * Ledger-styled to the editorial financing composition: hairlines and
+ * typography carry the structure, never a rounded panel. All assessment
+ * information is preserved — score and confidence stay visually distinct
+ * (AI.md Section 8), factors stay a scannable list, the recommendation is
+ * set apart typographically (DESIGN.md Section 15).
  */
 
 /**
@@ -26,117 +32,135 @@ function engineName(result: AnalysisResponse): string {
   return "Koby assessment";
 }
 
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+      {children}
+    </p>
+  );
+}
+
 export function AnalysisCard({ result }: { result: AnalysisResponse }) {
   const { assessment, detail } = result;
   const live = result.source !== "deterministic-fallback";
   return (
-    <Panel
-      title="Koby Financial Analysis"
-      description="Advisory analysis based on submitted financial data."
-    >
-      <div className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs">
-        <span className="font-medium text-koby-text-secondary">Analysis engine</span>
-        <span className="font-mono text-koby-text">{engineName(result)}</span>
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Label>Analysis engine</Label>
+        <span className="font-mono text-sm text-koby-text">{engineName(result)}</span>
+        <ProvenanceTag source="AI Analysis" />
       </div>
       {!live ? (
-        <p className="mb-3 text-xs text-koby-text-muted">Live AI analysis currently unavailable.</p>
+        <p className="mt-2 text-xs text-koby-text-muted">Live AI analysis currently unavailable.</p>
       ) : null}
-      <p className="mb-4 text-xs text-koby-text-muted">
+      <p className="mt-2 max-w-[62ch] text-xs leading-relaxed text-koby-text-muted">
         This analysis is advisory only. It does not approve financing, set terms, guarantee
         repayment, or authorize any transaction.
       </p>
-      <dl className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <dt className="text-sm font-medium text-koby-text-secondary">Assessment score</dt>
-          <dd className="mt-1 text-3xl font-bold tabular-nums text-koby-text">
+
+      <div className="mt-6 grid min-w-0 gap-x-10 sm:grid-cols-2">
+        <div className="min-w-0 border-t border-koby-border py-5">
+          <Label>Assessment score</Label>
+          <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text">
             {assessment.score}
-            <span className="text-base font-medium text-koby-text-muted"> / 100</span>
-          </dd>
+            <span className="text-xl font-medium text-koby-text-muted"> / 100</span>
+          </p>
         </div>
-        <div>
-          <dt className="text-sm font-medium text-koby-text-secondary">Model confidence</dt>
-          <dd className="mt-1 text-3xl font-bold tabular-nums text-koby-text">
+        <div className="min-w-0 border-t border-koby-border py-5">
+          <Label>Model confidence</Label>
+          <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text">
             {assessment.confidence}
-            <span className="text-base font-medium text-koby-text-muted">%</span>
-          </dd>
+            <span className="text-xl font-medium text-koby-text-muted">%</span>
+          </p>
           <p className="mt-1 text-xs text-koby-text-muted">
             Confidence reflects data completeness, not a guarantee of outcome.
           </p>
         </div>
-      </dl>
-      <div className="mt-4">
-        <h3 className="text-sm font-semibold text-koby-text">Key factors</h3>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
-          {assessment.factors.map((factor) => (
-            <li key={factor}>{factor}</li>
-          ))}
-        </ul>
-      </div>
-      <div className="mt-4 rounded-koby-sm bg-koby-bg p-3">
-        <h3 className="text-sm font-semibold text-koby-text">Recommendation</h3>
-        <p className="mt-1 text-sm text-koby-text-secondary">{assessment.recommendation}</p>
       </div>
 
-      <div className="mt-4 space-y-4">
-        <section>
-          <h3 className="text-sm font-semibold text-koby-text">Revenue &amp; request summary</h3>
-          <p className="mt-1 text-sm text-koby-text-secondary">{detail.revenueSummary}</p>
-          <p className="mt-1 text-sm text-koby-text-secondary">{detail.requestedFinancingSummary}</p>
-        </section>
-        <section>
-          <h3 className="text-sm font-semibold text-koby-text">Cash-flow observations</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
-            {detail.cashFlowObservations.map((o) => (
-              <li key={o}>{o}</li>
-            ))}
-          </ul>
-        </section>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <section>
-            <h3 className="text-sm font-semibold text-koby-text">Consistency &amp; trend</h3>
-            <p className="mt-1 text-sm text-koby-text-secondary">{detail.consistencyTrend}</p>
-          </section>
-          <section>
-            <h3 className="text-sm font-semibold text-koby-text">Concentration</h3>
-            <p className="mt-1 text-sm text-koby-text-secondary">{detail.concentrationNotes}</p>
-          </section>
-        </div>
-        <section>
-          <h3 className="text-sm font-semibold text-koby-text">Repayment capacity</h3>
-          <p className="mt-1 text-sm text-koby-text-secondary">{detail.repaymentCapacity}</p>
-        </section>
-        {detail.inconsistencies.length > 0 ? (
-          <section>
-            <h3 className="text-sm font-semibold text-koby-text">Inconsistencies &amp; risk indicators</h3>
-            <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
-              {detail.inconsistencies.map((o) => (
-                <li key={o}>{o}</li>
+      <div className="grid min-w-0 gap-x-10 sm:grid-cols-12">
+        <div className="min-w-0 sm:col-span-7">
+          <div className="border-t border-koby-border py-5">
+            <Label>Key factors</Label>
+            <ul className="mt-3 space-y-3">
+              {assessment.factors.map((factor) => (
+                <li key={factor} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text first:border-t-0 first:pt-0">
+                  {factor}
+                </li>
               ))}
             </ul>
-          </section>
-        ) : null}
-        {detail.missingInfo.length > 0 ? (
-          <section>
-            <h3 className="text-sm font-semibold text-koby-text">Missing information</h3>
-            <p className="mt-1 text-sm text-koby-text-secondary">
-              Not provided: {detail.missingInfo.join("; ")}. Supplying these would improve the analysis.
+          </div>
+          <div className="border-t border-koby-border py-5">
+            <Label>Revenue &amp; request</Label>
+            <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{detail.revenueSummary}</p>
+            <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{detail.requestedFinancingSummary}</p>
+          </div>
+          <div className="border-t border-koby-border py-5">
+            <Label>Cash-flow observations</Label>
+            <ul className="mt-3 space-y-3">
+              {detail.cashFlowObservations.map((o) => (
+                <li key={o} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text-secondary first:border-t-0 first:pt-0">
+                  {o}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="border-t border-koby-border py-5">
+            <Label>Key findings</Label>
+            <ul className="mt-3 space-y-3">
+              {detail.keyFindings.map((o) => (
+                <li key={o} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text-secondary first:border-t-0 first:pt-0">
+                  {o}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="min-w-0 sm:col-span-5">
+          <div className="border-t-2 border-koby-text py-5">
+            <Label>Recommendation</Label>
+            <p className="mt-3 text-xl leading-snug font-medium tracking-tight text-koby-text">
+              “{assessment.recommendation}”
             </p>
-          </section>
-        ) : null}
-        <section>
-          <h3 className="text-sm font-semibold text-koby-text">Key findings</h3>
-          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
-            {detail.keyFindings.map((o) => (
-              <li key={o}>{o}</li>
-            ))}
-          </ul>
-        </section>
-        <p className="text-xs text-koby-text-muted">{detail.confidenceLimitations}</p>
-        <div className="rounded-koby-sm border border-koby-border-strong p-3">
-          <p className="text-sm font-semibold text-koby-text">Human/financier review required</p>
-          <p className="mt-1 text-sm text-koby-text-secondary">{detail.reviewerNote}</p>
+          </div>
+          <div className="border-t border-koby-border py-5">
+            <Label>Consistency &amp; trend</Label>
+            <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{detail.consistencyTrend}</p>
+          </div>
+          <div className="border-t border-koby-border py-5">
+            <Label>Concentration</Label>
+            <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{detail.concentrationNotes}</p>
+          </div>
+          <div className="border-t border-koby-border py-5">
+            <Label>Repayment capacity</Label>
+            <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{detail.repaymentCapacity}</p>
+          </div>
+          {detail.inconsistencies.length > 0 ? (
+            <div className="border-t border-koby-border py-5">
+              <Label>Inconsistencies &amp; risk indicators</Label>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
+                {detail.inconsistencies.map((o) => (
+                  <li key={o}>{o}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {detail.missingInfo.length > 0 ? (
+            <div className="border-t border-koby-border py-5">
+              <Label>Missing information</Label>
+              <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">
+                Not provided: {detail.missingInfo.join("; ")}. Supplying these would improve the analysis.
+              </p>
+            </div>
+          ) : null}
+          <div className="border-t border-koby-border py-5">
+            <Label>Reviewer note</Label>
+            <p className="mt-2 text-sm font-medium text-koby-text">Human/financier review required.</p>
+            <p className="mt-1 text-sm leading-relaxed text-koby-text-secondary">{detail.reviewerNote}</p>
+            <p className="mt-3 text-xs leading-relaxed text-koby-text-muted">{detail.confidenceLimitations}</p>
+          </div>
         </div>
       </div>
-    </Panel>
+    </div>
   );
 }

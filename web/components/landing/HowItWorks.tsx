@@ -38,7 +38,7 @@ export function HowItWorks() {
             <SectionHeading
               eyebrow="How it works"
               title="From expected revenue to a completed position"
-              description="Businesses earn later and need capital now. Three moves bridge that gap — everything that changes what is owed happens onchain."
+              description="Businesses earn later and need capital now. Traditional receivables financing is slow and opaque — private ledgers, unclear terms, waiting. Koby replaces that with shared, validated onchain state. Three moves bridge the gap."
             />
           </div>
         </Reveal>
@@ -63,6 +63,29 @@ export function HowItWorks() {
             </Reveal>
           ))}
         </ol>
+        <Reveal>
+          <div className="mt-10 border-t-2 border-koby-text pt-5">
+            <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+              Where AI fits
+            </p>
+            <dl className="mt-4 grid gap-x-10 gap-y-0 sm:grid-cols-2">
+              <div className="border-t border-koby-border py-3">
+                <dt className="text-sm font-semibold text-koby-text">AI advises</dt>
+                <dd className="mt-1 text-sm leading-relaxed text-koby-text-secondary">
+                  Assesses the submitted cash-flow picture; explains its factors and states its
+                  confidence. Advisory only — the business proposes terms, the financier decides.
+                </dd>
+              </div>
+              <div className="border-t border-koby-border py-3">
+                <dt className="text-sm font-semibold text-koby-text">AI never</dt>
+                <dd className="mt-1 text-sm leading-relaxed text-koby-text-secondary">
+                  Moves funds, signs transactions, sets terms, writes onchain, or guarantees
+                  approval, repayment, or returns.
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </Reveal>
       </Container>
     </section>
   );

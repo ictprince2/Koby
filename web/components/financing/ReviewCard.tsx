@@ -1,11 +1,14 @@
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
-import { Card } from "@/components/ui/Card";
 import { monadConfig } from "@/lib/monad";
 
 /**
  * ReviewCard — pre-signature disclosure (SECURITY.md Section 8, PRD.md 19):
  * action, amount, token, target, network, terms. Rendered before every
  * financial transaction is requested from the wallet.
+ *
+ * Ledger-styled to the editorial financing composition: the action reads
+ * as a large statement, terms as ruled monospace rows. Same props and same
+ * information as before — only the container changed.
  */
 export function ReviewCard({
   action,
@@ -19,29 +22,39 @@ export function ReviewCard({
   contractLabel: string;
 }) {
   return (
-    <Card title="Review before settlement" description="This action will create/settle the financing position on Monad. Read carefully before signing.">
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="font-medium text-koby-text-secondary">Action</dt>
-          <dd className="mt-0.5 font-semibold text-koby-text">{action}</dd>
+    <div className="min-w-0">
+      <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+        Action
+      </p>
+      <p className="mt-2 text-3xl font-bold tracking-tight text-koby-text sm:text-4xl">{action}</p>
+      <dl className="mt-6">
+        <div className="grid min-w-0 gap-1 border-t border-koby-border py-4 sm:grid-cols-12 sm:gap-4">
+          <dt className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase sm:col-span-4">
+            Amount
+          </dt>
+          <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">{amount}</dd>
         </div>
-        <div>
-          <dt className="font-medium text-koby-text-secondary">Amount</dt>
-          <dd className="mt-0.5 font-semibold tabular-nums text-koby-text">{amount}</dd>
+        <div className="grid min-w-0 gap-1 border-t border-koby-border py-4 sm:grid-cols-12 sm:gap-4">
+          <dt className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase sm:col-span-4">
+            Token
+          </dt>
+          <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">
+            Testnet USDC (6 decimals)
+          </dd>
         </div>
-        <div>
-          <dt className="font-medium text-koby-text-secondary">Token</dt>
-          <dd className="mt-0.5 text-koby-text">Testnet USDC (6 decimals)</dd>
-        </div>
-        <div>
-          <dt className="font-medium text-koby-text-secondary">Network</dt>
-          <dd className="mt-0.5 text-koby-text">
+        <div className="grid min-w-0 gap-1 border-t border-koby-border py-4 sm:grid-cols-12 sm:gap-4">
+          <dt className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase sm:col-span-4">
+            Network
+          </dt>
+          <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">
             {monadConfig.chainName} · chain ID {monadConfig.chainId}
           </dd>
         </div>
-        <div className="sm:col-span-2">
-          <dt className="font-medium text-koby-text-secondary">Target contract</dt>
-          <dd className="mt-0.5">
+        <div className="grid min-w-0 gap-1 border-t border-koby-border py-4 sm:grid-cols-12 sm:gap-4">
+          <dt className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase sm:col-span-4">
+            Target contract
+          </dt>
+          <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">
             {monadConfig.contractAddress ? (
               <AddressDisplay value={monadConfig.contractAddress} label={contractLabel} />
             ) : (
@@ -50,12 +63,14 @@ export function ReviewCard({
           </dd>
         </div>
         {terms.map((term) => (
-          <div key={term.label} className="min-w-0">
-            <dt className="font-medium text-koby-text-secondary">{term.label}</dt>
-            <dd className="mt-0.5 break-all tabular-nums text-koby-text">{term.value}</dd>
+          <div key={term.label} className="grid min-w-0 gap-1 border-t border-koby-border py-4 sm:grid-cols-12 sm:gap-4">
+            <dt className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase sm:col-span-4">
+              {term.label}
+            </dt>
+            <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">{term.value}</dd>
           </div>
         ))}
       </dl>
-    </Card>
+    </div>
   );
 }

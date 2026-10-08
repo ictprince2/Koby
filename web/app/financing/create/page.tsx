@@ -27,8 +27,9 @@ import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/StateBlocks";
 import { ProvenanceTag } from "@/components/ui/ProvenanceTag";
-import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { FlowSteps } from "@/components/financing/FlowSteps";
+import { AnalysisCard } from "@/components/financing/AnalysisCard";
+import { ReviewCard } from "@/components/financing/ReviewCard";
 import { TxProgress } from "@/components/financing/TxProgress";
 import { useWallet } from "@/hooks/useWallet";
 import { useTx } from "@/hooks/useTx";
@@ -100,29 +101,23 @@ function StageHead({ index, name, note }: { index: string; name: string; note?: 
   );
 }
 
-/** One ledger row: quiet label, large financial value, optional caption. */
-function Figure({ label, value, caption }: { label: string; value: string; caption?: string }) {
+/** One ledger figure. Exactly one hero per view (DESIGN.md Section 8). */
+function Figure({ label, value, caption, hero }: { label: string; value: string; caption?: string; hero?: boolean }) {
   return (
     <div className="min-w-0 border-t border-koby-border py-5 first:border-t-0 first:pt-0">
       <Label>{label}</Label>
-      <p className="mt-2 text-4xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-5xl">
+      <p
+        className={
+          hero === true
+            ? "mt-2 text-4xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-5xl"
+            : "mt-2 text-2xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-3xl"
+        }
+      >
         {value}
       </p>
       {caption !== undefined ? (
         <p className="mt-1 text-xs text-koby-text-muted">{caption}</p>
       ) : null}
-    </div>
-  );
-}
-
-/** Ledger term row for review/confirmation data. Monospace values. */
-function Term({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid min-w-0 gap-1 border-t border-koby-border py-4 first:border-t-0 first:pt-0 sm:grid-cols-12 sm:gap-4">
-      <dt className="sm:col-span-4">
-        <Label>{label}</Label>
-      </dt>
-      <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">{children}</dd>
     </div>
   );
 }
@@ -151,18 +146,6 @@ function Field({
       <span className="block">{children}</span>
     </label>
   );
-}
-
-/** Engine display name per analysis response source. */
-function engineName(result: AnalysisResponse): string {
-  if (result.source === "openrouter") {
-    const modelId = result.model.replace(/\s*\(.*\)$/, "").trim();
-    return modelId === "" ? "OpenRouter" : `OpenRouter · ${modelId}`;
-  }
-  if (result.source === "kimi") {
-    return "Kimi";
-  }
-  return "Koby assessment";
 }
 
 /* ------------------------------- Page ---------------------------------- */
@@ -431,7 +414,7 @@ export default function CreateFinancingPage() {
                   </p>
                   <div className="mt-5 flex flex-col gap-3">
                     <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"} size="lg" className="w-full">
-                      {phase === "analyzing" ? "Analyzing cash flow…" : "Continue to assessment →"}
+                      {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow"}
                     </Button>
                     <Button variant="secondary" onClick={fillDemo} className="w-full">
                       Fill example values
@@ -461,115 +444,8 @@ export default function CreateFinancingPage() {
             <div id="koby-create-assessment">
               <StageHead index="04" name="Assessment" note="Advisory only. It does not approve financing, set terms, guarantee repayment, or authorize any transaction." />
             </div>
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <Label>Analysis engine</Label>
-              <span className="font-mono text-sm text-koby-text">{engineName(analysis)}</span>
-              <ProvenanceTag source="AI Analysis" />
-            </div>
-            {analysis.source === "deterministic-fallback" ? (
-              <p className="mt-2 text-xs text-koby-text-muted">Live AI analysis currently unavailable.</p>
-            ) : null}
-            <div className="mt-6 grid min-w-0 gap-x-10 sm:grid-cols-12">
-              <div className="min-w-0 border-t border-koby-border py-5 sm:col-span-6">
-                <Label>Assessment score</Label>
-                <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text sm:text-6xl">
-                  {analysis.assessment.score}
-                  <span className="text-xl font-medium text-koby-text-muted"> / 100</span>
-                </p>
-              </div>
-              <div className="min-w-0 border-t border-koby-border py-5 sm:col-span-6">
-                <Label>Model confidence</Label>
-                <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text sm:text-6xl">
-                  {analysis.assessment.confidence}
-                  <span className="text-xl font-medium text-koby-text-muted">%</span>
-                </p>
-                <p className="mt-1 text-xs text-koby-text-muted">
-                  Confidence reflects data completeness, not a guarantee of outcome.
-                </p>
-              </div>
-            </div>
-            <div className="grid min-w-0 gap-x-10 sm:grid-cols-12">
-              <div className="min-w-0 sm:col-span-7">
-                <div className="border-t border-koby-border py-5">
-                  <Label>Key factors</Label>
-                  <ul className="mt-3 space-y-3">
-                    {analysis.assessment.factors.map((factor) => (
-                      <li key={factor} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text first:border-t-0 first:pt-0">
-                        {factor}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="border-t border-koby-border py-5">
-                  <Label>Revenue &amp; request</Label>
-                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.revenueSummary}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.requestedFinancingSummary}</p>
-                </div>
-                <div className="border-t border-koby-border py-5">
-                  <Label>Cash-flow observations</Label>
-                  <ul className="mt-3 space-y-3">
-                    {analysis.detail.cashFlowObservations.map((o) => (
-                      <li key={o} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text-secondary first:border-t-0 first:pt-0">
-                        {o}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="border-t border-koby-border py-5">
-                  <Label>Key findings</Label>
-                  <ul className="mt-3 space-y-3">
-                    {analysis.detail.keyFindings.map((o) => (
-                      <li key={o} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text-secondary first:border-t-0 first:pt-0">
-                        {o}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              <div className="min-w-0 sm:col-span-5">
-                <div className="border-t-2 border-koby-text py-5">
-                  <Label>Recommendation</Label>
-                  <p className="mt-3 text-xl leading-snug font-medium tracking-tight text-koby-text">
-                    “{analysis.assessment.recommendation}”
-                  </p>
-                </div>
-                <div className="border-t border-koby-border py-5">
-                  <Label>Consistency &amp; trend</Label>
-                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.consistencyTrend}</p>
-                </div>
-                <div className="border-t border-koby-border py-5">
-                  <Label>Concentration</Label>
-                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.concentrationNotes}</p>
-                </div>
-                <div className="border-t border-koby-border py-5">
-                  <Label>Repayment capacity</Label>
-                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.repaymentCapacity}</p>
-                </div>
-                {analysis.detail.inconsistencies.length > 0 ? (
-                  <div className="border-t border-koby-border py-5">
-                    <Label>Inconsistencies &amp; risk indicators</Label>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
-                      {analysis.detail.inconsistencies.map((o) => (
-                        <li key={o}>{o}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                {analysis.detail.missingInfo.length > 0 ? (
-                  <div className="border-t border-koby-border py-5">
-                    <Label>Missing information</Label>
-                    <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">
-                      Not provided: {analysis.detail.missingInfo.join("; ")}. Supplying these would improve the analysis.
-                    </p>
-                  </div>
-                ) : null}
-                <div className="border-t border-koby-border py-5">
-                  <Label>Reviewer note</Label>
-                  <p className="mt-2 text-sm font-medium text-koby-text">Human/financier review required.</p>
-                  <p className="mt-1 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.reviewerNote}</p>
-                  <p className="mt-3 text-xs leading-relaxed text-koby-text-muted">{analysis.detail.confidenceLimitations}</p>
-                </div>
-              </div>
+            <div className="mt-2">
+              <AnalysisCard result={analysis} />
             </div>
           </section>
 
@@ -582,7 +458,7 @@ export default function CreateFinancingPage() {
             </div>
             <div className="mt-6">
               <Figure label="Future receivables" value={`$${formatCentsToUsd(parseUsdToCents(receivables) ?? 0n)}`} caption="Business-submitted estimate" />
-              <Figure label="Requested liquidity" value={`$${formatCentsToUsd(parseUsdToCents(requested) ?? 0n)}`} caption={`Advisory eligible: $${analysis.eligibleAmountUsd} — guidance, not an offer`} />
+              <Figure hero label="Requested liquidity" value={`$${formatCentsToUsd(parseUsdToCents(requested) ?? 0n)}`} caption={`Advisory eligible: $${analysis.eligibleAmountUsd} — guidance, not an offer`} />
               <Figure label="Proposed obligation" value={`$${formatCentsToUsd(parseUsdToCents(obligation) ?? 0n)}`} caption={`Financing ratio: ${(analysis.financingRatioBps / 100).toFixed(2)}% · Repayment period: ${periodDays} days (informational only)`} />
             </div>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -600,25 +476,19 @@ export default function CreateFinancingPage() {
               <StageHead index="06" name="Review & settle" note="This action will create the financing position on Monad. Read carefully before signing." />
             </div>
             <div className="mt-6">
-              <Figure label="Action" value={`Create ${principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : ""} financing`} />
+              <ReviewCard
+                action={`Create ${principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : ""} financing`}
+                amount={principalBase !== null ? `${formatBaseUnits(principalBase, USDC_DECIMALS)} (testnet USDC)` : "—"}
+                contractLabel="Koby financing contract"
+                terms={[
+                  { label: "Business", value: effectiveBusiness || "—" },
+                  { label: "Principal (financing amount)", value: principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : "—" },
+                  { label: "Repayment obligation", value: obligationBase !== null ? formatBaseUnits(obligationBase, USDC_DECIMALS) : "—" },
+                  { label: "Repayment period", value: `${periodDays} days (informational only)` },
+                  { label: "Wallet", value: address ?? "Not connected" },
+                ]}
+              />
             </div>
-            <dl className="mt-2">
-              <Term label="Amount">{principalBase !== null ? `${formatBaseUnits(principalBase, USDC_DECIMALS)} (testnet USDC)` : "—"}</Term>
-              <Term label="Token">Testnet USDC (6 decimals)</Term>
-              <Term label="Network">{monadConfig.chainName} · chain ID {monadConfig.chainId}</Term>
-              <Term label="Target contract">
-                {monadConfig.contractAddress ? (
-                  <AddressDisplay value={monadConfig.contractAddress} label="Koby financing contract" />
-                ) : (
-                  <span className="text-koby-error">Contract not configured</span>
-                )}
-              </Term>
-              <Term label="Business">{effectiveBusiness || "—"}</Term>
-              <Term label="Principal">{principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : "—"}</Term>
-              <Term label="Repayment obligation">{obligationBase !== null ? formatBaseUnits(obligationBase, USDC_DECIMALS) : "—"}</Term>
-              <Term label="Repayment period">{`${periodDays} days (informational only)`}</Term>
-              <Term label="Wallet">{address ?? "Not connected"}</Term>
-            </dl>
           </section>
 
           {!configured ? (
