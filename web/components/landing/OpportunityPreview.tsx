@@ -4,39 +4,37 @@ import { Reveal } from "@/components/landing/Reveal";
 import { SectionHeading } from "@/components/landing/SectionHeading";
 import { TechnicalLabel } from "@/components/landing/TechnicalLabel";
 
-const FIELDS = [
+const SUPPORTING_FIELDS = [
   {
     label: "Future receivables",
     value: "$100,000",
     note: "Business-submitted estimate",
-    soft: true,
   },
   {
-    label: "Financing amount",
-    value: "$70,000",
-    note: "Proposed against the receivables above",
-    soft: false,
+    label: "Repayment horizon",
+    value: "90 days",
+    note: "Informational in this version",
   },
   {
     label: "Repayment obligation",
     value: "Per agreed terms",
     note: "Fixed at creation, enforced onchain",
-    soft: false,
   },
   {
     label: "Risk signals",
     value: "Assessment",
     note: "AI summary with stated confidence",
-    soft: false,
   },
 ] as const;
 
 /**
  * OpportunityPreview — the product plate: one example as a schedule plate
  * with ledger rows, not a generic card. This is the category made concrete
- * (future receivables → immediate liquidity → programmable repayment). No
- * invented obligation figure, no status badge that could read as onchain
- * state, no ranking language. The live marketplace lists only real positions.
+ * (future receivables → immediate liquidity → programmable repayment). One
+ * dominant figure ($70,000 financing, set large); supporting values are
+ * deliberately secondary in size and tone. No invented obligation figure,
+ * no status badge that could read as onchain state, no ranking language.
+ * The live marketplace lists only real positions.
  */
 export function OpportunityPreview() {
   return (
@@ -64,6 +62,15 @@ export function OpportunityPreview() {
                 to see live opportunities when positions exist. Empty until then, by
                 design.
               </p>
+              <div className="mt-6 border-t border-koby-border pt-4">
+                <TechnicalLabel>What the numbers mean</TechnicalLabel>
+                <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">
+                  $100,000 is what the business expects to collect — an estimate,
+                  never a promise. $70,000 is the liquidity proposed against it. The
+                  two are different things, and the plate keeps them visually
+                  distinct for that reason: one hero, the rest supporting context.
+                </p>
+              </div>
               <p className="mt-4 border-t border-koby-border pt-4 font-mono text-[11px] leading-relaxed tracking-[0.08em] text-koby-text-muted uppercase">
                 Example context — Acme Logistics · $100,000 expected receivables →
                 $70,000 financing → Monad settlement → validated repayment
@@ -84,7 +91,19 @@ export function OpportunityPreview() {
                 </div>
               </div>
               <dl>
-                {FIELDS.map((field) => (
+                <div className="border-b border-koby-border px-6 py-6">
+                  <dt>
+                    <TechnicalLabel>Financing amount — the dominant figure</TechnicalLabel>
+                  </dt>
+                  <dd className="mt-2 text-5xl font-bold tabular-nums tracking-tight break-words text-koby-text sm:text-6xl">
+                    $70,000
+                  </dd>
+                  <dd className="mt-1 text-xs text-koby-text-muted">
+                    Eligible liquidity proposed against the receivables below, funded by a
+                    financier and settled on Monad.
+                  </dd>
+                </div>
+                {SUPPORTING_FIELDS.map((field) => (
                   <div
                     key={field.label}
                     className="grid gap-1 border-b border-koby-border px-6 py-4 last:border-b-0 sm:grid-cols-12 sm:items-baseline sm:gap-4"
@@ -92,13 +111,7 @@ export function OpportunityPreview() {
                     <dt className="sm:col-span-4">
                       <TechnicalLabel>{field.label}</TechnicalLabel>
                     </dt>
-                    <dd
-                      className={
-                        field.soft === true
-                          ? "text-2xl font-bold tabular-nums tracking-tight text-koby-text-secondary sm:col-span-3"
-                          : "text-2xl font-bold tabular-nums tracking-tight text-koby-text sm:col-span-3"
-                      }
-                    >
+                    <dd className="text-lg font-semibold tabular-nums tracking-tight text-koby-text-secondary sm:col-span-3">
                       {field.value}
                     </dd>
                     <dd className="text-xs text-koby-text-muted sm:col-span-5 sm:text-right">

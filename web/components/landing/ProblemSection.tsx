@@ -41,6 +41,20 @@ export function ProblemSection() {
             </Reveal>
           ))}
         </div>
+        <Reveal>
+          <div className="mt-8 border-t-2 border-koby-text pt-5">
+            <h3 className="text-lg font-semibold tracking-tight text-koby-text">
+              The liquidity gap — and what Koby does about it
+            </h3>
+            <p className="mt-2 max-w-[70ch] text-base leading-relaxed text-koby-text-secondary">
+              Future cash flow is valuable, but waiting for it creates a gap between
+              what a business will collect and what it needs today. Koby turns
+              eligible future receivables into a financing opportunity with
+              transparent terms: analyzed, funded, settled onchain, and repaid
+              against programmable terms until the position completes.
+            </p>
+          </div>
+        </Reveal>
       </Container>
     </section>
   );

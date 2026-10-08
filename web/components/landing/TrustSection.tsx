@@ -86,6 +86,21 @@ export function TrustSection() {
             payment-rail integration a future version can earn.
           </p>
         </Reveal>
+
+        <Reveal>
+          <dl className="mt-6 border-t border-koby-border">
+            {[
+              ["Contract state is the source of truth", "Status, amounts repaid, and outstanding balance are read from the chain — the interface cannot invent them."],
+              ["Transactions are independently verifiable", "Every state change is a transaction that can be checked on the explorer, not a claim to take on trust."],
+              ["No action happens without your signature", "Creating, funding, and repaying each require an explicit wallet action with the terms shown first."],
+            ].map(([term, detail]) => (
+              <div key={term} className="grid gap-1 border-b border-koby-border py-4 sm:grid-cols-12 sm:gap-4">
+                <dt className="text-sm font-semibold text-koby-text sm:col-span-5">{term}</dt>
+                <dd className="text-sm leading-relaxed text-koby-text-secondary sm:col-span-7">{detail}</dd>
+              </div>
+            ))}
+          </dl>
+        </Reveal>
       </Container>
     </section>
   );

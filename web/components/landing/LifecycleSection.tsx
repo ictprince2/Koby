@@ -38,9 +38,11 @@ const STAGES = [
 ] as const;
 
 /**
- * LifecycleSection — FlowLine vessel up top, then an asymmetric ledger:
- * sticky strata column (depth markers for seven stages) beside stage rows
- * separated by hairlines. Rows, not boxes; the column carries the depth.
+ * LifecycleSection — the full seven-stage lifecycle: FlowLine vessel up
+ * top, then an asymmetric ledger with sticky strata column beside stage
+ * rows separated by hairlines. This is the complete version of the story
+ * the condensed three-step summary introduces — every handoff from
+ * expected revenue to completed position, on one shared record.
  */
 export function LifecycleSection() {
   return (
@@ -49,8 +51,8 @@ export function LifecycleSection() {
         <Reveal>
           <div id="koby-lifecycle-heading">
             <SectionHeading
-              eyebrow="How Koby works"
-              title="From expected revenue to a completed position"
+              eyebrow="How Koby works — the full lifecycle"
+              title="Every stage, on one shared record"
               description="From expected revenue to a completed position, on one shared record. Anything that changes what is owed happens in a validated onchain transaction, never in a private ledger."
             />
           </div>

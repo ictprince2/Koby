@@ -27,8 +27,11 @@ const OPERATIONS = [
 /**
  * SettlementSection — full-width ledger band. Operations read as ledger
  * rows separated by hairlines (no boxes); the funding row carries the
- * accent edge as the settlement event. No network values: no chain IDs,
- * no RPC URLs, no contract or token addresses.
+ * accent edge as the settlement event. The role ledger below names each
+ * participant's job so the relationship is explicit: Koby structures,
+ * analysis advises, Monad settles, the contract remembers — and the
+ * financier, not the chain, provides the capital. No network values: no
+ * chain IDs, no RPC URLs, no contract or token addresses.
  */
 export function SettlementSection() {
   return (
@@ -102,6 +105,25 @@ export function SettlementSection() {
                   <ProvenanceTag source="Onchain" />
                   <ProvenanceTag source="Testnet" />
                 </div>
+              </div>
+            </Reveal>
+            <Reveal>
+              <div className="border-t border-koby-border pt-5">
+                <TechnicalLabel>Who does what</TechnicalLabel>
+                <dl className="mt-3">
+                  {[
+                    ["Koby", "The financing application — structures the request, the assessment, and the position screens."],
+                    ["AI analysis", "Advises on the submitted cash-flow picture. Never touches funds or settlement."],
+                    ["Monad", "The onchain settlement layer the lifecycle executes on. Monad is not the financier."],
+                    ["Smart contract", "The source of truth for financing state — status, amounts, balances."],
+                    ["Financier", "Provides the capital by funding the agreed principal."],
+                  ].map(([role, job]) => (
+                    <div key={role} className="grid gap-1 border-t border-koby-border py-3 first:border-t-0 first:pt-0 sm:grid-cols-12 sm:gap-4">
+                      <dt className="text-sm font-semibold text-koby-text sm:col-span-3">{role}</dt>
+                      <dd className="text-sm leading-relaxed text-koby-text-secondary sm:col-span-9">{job}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
             </Reveal>
           </div>
