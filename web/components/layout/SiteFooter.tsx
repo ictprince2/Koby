@@ -19,16 +19,17 @@ const PRODUCT_LINKS = [
 
 /**
  * Resources column: only destinations that exist. "How it works" targets
- * the condensed three-step explanation on the homepage; "Monad explorer"
+ * the condensed three-step explanation on the homepage; "Documentation"
+ * targets the public-facing technical docs at /docs; "Monad explorer"
  * uses the configured explorer URL (lib/config.ts), never a hardcoded
  * address.
  *
  * Intentionally omitted until real destinations exist (no dead links):
- * - Documentation (no docs page or URL configured)
- * - Security (no security page configured)
+ * - Security (no standalone security page configured; covered in /docs/security)
  */
 const RESOURCE_LINKS = [
   { href: "/#koby-how-heading", label: "How it works" },
+  { href: "/docs", label: "Documentation" },
   { href: kobyConfig.explorerUrl, label: "Monad explorer", external: true },
 ] as const;
 
