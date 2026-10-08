@@ -2,12 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title KobyFinancing
@@ -72,24 +68,11 @@ contract KobyFinancing is ReentrancyGuard {
     mapping(uint256 => Position) private _positions;
 
     event FinancingCreated(
-        uint256 indexed id,
-        address indexed business,
-        uint256 principal,
-        uint256 obligation,
-        uint256 timestamp
+        uint256 indexed id, address indexed business, uint256 principal, uint256 obligation, uint256 timestamp
     );
-    event FinancingFunded(
-        uint256 indexed id,
-        address indexed financier,
-        uint256 amount,
-        uint256 timestamp
-    );
+    event FinancingFunded(uint256 indexed id, address indexed financier, uint256 amount, uint256 timestamp);
     event RepaymentRecorded(
-        uint256 indexed id,
-        uint256 amount,
-        uint256 totalRepaid,
-        uint256 outstanding,
-        uint256 timestamp
+        uint256 indexed id, uint256 amount, uint256 totalRepaid, uint256 outstanding, uint256 timestamp
     );
     event FinancingCompleted(uint256 indexed id, uint256 timestamp);
 
@@ -124,11 +107,7 @@ contract KobyFinancing is ReentrancyGuard {
      * and >= principal.
      * @return id The new position id.
      */
-    function create(
-        address business,
-        uint256 principal,
-        uint256 obligation
-    ) external returns (uint256 id) {
+    function create(address business, uint256 principal, uint256 obligation) external returns (uint256 id) {
         if (business == address(0)) revert ZeroBusiness();
         if (principal == 0) revert ZeroPrincipal();
         if (obligation == 0) revert ZeroObligation();
@@ -148,13 +127,7 @@ contract KobyFinancing is ReentrancyGuard {
             status: Status.Created
         });
 
-        emit FinancingCreated(
-            id,
-            business,
-            principal,
-            obligation,
-            block.timestamp
-        );
+        emit FinancingCreated(id, business, principal, obligation, block.timestamp);
     }
 
     /**
@@ -191,8 +164,9 @@ contract KobyFinancing is ReentrancyGuard {
      */
     function repay(uint256 id, uint256 amount) external nonReentrant {
         Position storage p = _position(id);
-        if (p.status != Status.Funded && p.status != Status.Repaying)
+        if (p.status != Status.Funded && p.status != Status.Repaying) {
             revert NotRepayable();
+        }
         if (msg.sender != p.business) revert NotBusiness();
         if (amount == 0) revert ZeroAmount();
 
@@ -213,13 +187,7 @@ contract KobyFinancing is ReentrancyGuard {
         address financier = p.financier;
         USDC.safeTransferFrom(msg.sender, financier, amount);
 
-        emit RepaymentRecorded(
-            id,
-            amount,
-            p.repaid,
-            newOutstanding,
-            block.timestamp
-        );
+        emit RepaymentRecorded(id, amount, p.repaid, newOutstanding, block.timestamp);
         if (completed) {
             emit FinancingCompleted(id, block.timestamp);
         }
