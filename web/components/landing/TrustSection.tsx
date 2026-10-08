@@ -13,7 +13,7 @@ const SIMULATED_ITEMS = [
   "The example business and its $100,000 receivables figure",
   "Example business history feeding the illustrative assessment",
   "Illustrative analytics where live data is not part of the example",
-  "The assessment panel on this page, which demonstrates structure only",
+  "Illustrative assessments, which advise on structure rather than decide terms",
 ] as const;
 
 /**
@@ -30,8 +30,9 @@ export function TrustSection() {
         <Reveal>
           <div id="koby-trust-heading">
             <SectionHeading
+              eyebrow="Trust"
               title="Honest about what is real"
-              description="Koby labels provenance everywhere it could matter. The rule is simple: confirmed onchain facts and labeled examples are never allowed to look alike."
+              description="Confirmed onchain facts and labeled examples never look alike."
             />
           </div>
         </Reveal>

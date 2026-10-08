@@ -5,7 +5,7 @@ import { StrataField } from "@/components/landing/StrataField";
 
 /**
  * ClosingCta — conversion on the strata bed. Same two CTA labels as the
- * hero (one label per intent: inspect as financier, start as business).
+ * hero (one label per intent: start as business, inspect as financier).
  */
 export function ClosingCta() {
   return (
@@ -22,15 +22,15 @@ export function ClosingCta() {
               Give future revenue a present tense.
             </h2>
             <p className="mt-3 max-w-[52ch] text-base leading-relaxed text-koby-text-secondary">
-              Inspect an opportunity as a financier, or describe receivables as a
-              business. Both paths start without a wallet.
+              Describe receivables as a business, or inspect an opportunity as a
+              financier. Both paths start without a wallet.
             </p>
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Button href="/marketplace" size="lg">
-                Explore financing opportunities
-              </Button>
-              <Button href="/financing/create" variant="secondary" size="lg">
+            <div className="mt-7 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
+              <Button href="/financing/create" size="lg" className="w-full text-center sm:w-auto">
                 Create financing request
+              </Button>
+              <Button href="/marketplace" variant="secondary" size="lg" className="w-full text-center sm:w-auto">
+                Explore marketplace
               </Button>
             </div>
           </div>

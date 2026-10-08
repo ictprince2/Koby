@@ -21,8 +21,8 @@ import { Button } from "@/components/ui/Button";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-20 bg-koby-bg">
-      <Container>
-        <div className="flex min-h-16 flex-nowrap items-center justify-between gap-2 py-2 sm:h-16 sm:py-0">
+      <Container className="min-w-0">
+        <div className="flex min-h-16 min-w-0 flex-nowrap items-center justify-between gap-2 py-2 sm:h-16 sm:py-0">
           <div className="flex min-w-0 flex-1 items-center gap-4 md:gap-6">
             <Link
               href="/"
@@ -46,14 +46,24 @@ export function SiteHeader() {
             <SiteNav />
           </div>
           <div className="flex shrink-0 flex-nowrap items-center gap-1.5 sm:gap-2">
-            <Button
-              href="/financing/create"
-              variant="secondary"
-              size="sm"
-              className="hidden whitespace-nowrap sm:inline-flex"
-            >
-              Create financing request
-            </Button>
+            {/*
+              Visibility wrapper (not the Button itself): Button's base
+              `inline-flex` beats the `hidden` utility in the Tailwind v4
+              display cascade, so `hidden` must live on a plain wrapper to
+              actually hide the create action below sm. Verified at 320px:
+              the unwrapped Button rendered 192px wide and forced page
+              overflow (document scrollWidth 421).
+            */}
+            <span className="hidden shrink-0 sm:inline-flex">
+              <Button
+                href="/financing/create"
+                variant="secondary"
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                Create financing request
+              </Button>
+            </span>
             <ThemeToggle className="shrink-0" />
             <WalletButton />
             <MobileNavMenu />

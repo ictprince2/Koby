@@ -44,8 +44,9 @@ export function SettlementSection() {
             <Reveal>
               <div id="koby-settlement-heading">
                 <SectionHeading
+                  eyebrow="Settlement"
                   title="Settlement is the product, not the backdrop"
-                  description="Koby does not keep financing state in a private database with a contract attached. Create, fund, and every repayment are real transactions; the contract is the record both sides verify."
+                  description="Create, fund, and every repayment are real transactions. The contract is the record both sides verify — no private database with a contract attached."
                 />
               </div>
             </Reveal>
@@ -97,7 +98,7 @@ export function SettlementSection() {
                   outstanding balance to exactly zero completes the position in the same
                   transaction.
                 </p>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <ProvenanceTag source="Onchain" />
                   <ProvenanceTag source="Testnet" />
                 </div>

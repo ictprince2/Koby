@@ -1,21 +1,22 @@
-import { AnalysisSection } from "@/components/landing/AnalysisSection";
 import { ClosingCta } from "@/components/landing/ClosingCta";
-import { DemoSection } from "@/components/landing/DemoSection";
+import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LandingHero } from "@/components/landing/LandingHero";
-import { LifecycleSection } from "@/components/landing/LifecycleSection";
 import { OpportunityPreview } from "@/components/landing/OpportunityPreview";
-import { ProblemSection } from "@/components/landing/ProblemSection";
 import { SettlementSection } from "@/components/landing/SettlementSection";
-import { StrataDivider } from "@/components/landing/StrataDivider";
 import { TrustSection } from "@/components/landing/TrustSection";
 
 /**
- * Landing route (/) — visual redesign on the Strata language.
+ * Landing route (/) — category-style product page.
  *
- * Section order follows USER_FLOW.md Section 4 (Hero, Problem, How Koby
- * Works, Lifecycle, AI Analysis, Monad Settlement, Marketplace preview,
- * Trust/Transparency, Demo/Example, Call to Action). Dividers separate
- * genuine movements only: into settlement, into the demo.
+ * Deliberately few sections with one clear hierarchy: the category
+ * (hero), a 3-step explanation (HowItWorks), the product plate
+ * (OpportunityPreview), settlement + trust infrastructure, and the final
+ * CTA. The full seven-stage lifecycle, the AI assessment structure, and
+ * the provenance-tagged example walkthrough no longer lecture from the
+ * homepage — that detail lives where money is involved (the settlement
+ * operations below, the opportunity plate above, and the financing
+ * creation/funding flows). Components for the retired sections remain in
+ * components/landing for reuse; they are simply not rendered here.
  *
  * Honesty rules enforced here, not just documented:
  * - The $100,000 / $70,000 figures are the canonical fictional example,
@@ -30,15 +31,10 @@ export default function Home() {
   return (
     <>
       <LandingHero />
-      <ProblemSection />
-      <LifecycleSection />
-      <AnalysisSection />
-      <StrataDivider note="settlement layer" />
-      <SettlementSection />
+      <HowItWorks />
       <OpportunityPreview />
+      <SettlementSection />
       <TrustSection />
-      <StrataDivider note="example flow" />
-      <DemoSection />
       <ClosingCta />
     </>
   );

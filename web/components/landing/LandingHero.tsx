@@ -7,11 +7,13 @@ import { TechnicalLabel } from "@/components/landing/TechnicalLabel";
 /**
  * LandingHero — full-bleed strata environment, asymmetric editorial grid.
  *
- * Copy sits in a wide left column; the right holds a settlement column:
- * diffuse estimate ($100,000) settling through bands into full-contrast
- * financing ($70,000) on the seam, crossed by the settlement fault with
- * repayment ticks below. Both figures are presented as an illustrative
- * example; nothing here is onchain state.
+ * Category-first: the eyebrow names the product category (onchain
+ * receivables financing) before the H1 states the promise. Copy sits in a
+ * wide left column; the right holds a settlement column: diffuse estimate
+ * ($100,000) settling through bands into full-contrast financing ($70,000)
+ * on the seam, crossed by the settlement fault with repayment ticks below.
+ * Both figures are presented as an illustrative example; nothing here is
+ * onchain state.
  */
 export function LandingHero() {
   return (
@@ -19,11 +21,14 @@ export function LandingHero() {
       <StrataField bands={7} contours />
 
       <Container className="relative py-10 sm:py-14">
-        <div className="grid items-center gap-8 lg:grid-cols-12 lg:gap-12">
-          <Reveal className="lg:col-span-7">
+        <div className="grid min-w-0 items-center gap-8 lg:grid-cols-12 lg:gap-12">
+          <Reveal className="min-w-0 lg:col-span-7">
+            <p className="font-mono text-[11px] font-medium tracking-[0.08em] text-koby-text-muted uppercase sm:tracking-[0.14em]">
+              Onchain receivables financing
+            </p>
             <h1
               id="koby-hero-heading"
-              className="max-w-[16ch] font-bold tracking-tight text-koby-text [font-size:clamp(2rem,9vw,2.6rem)] [line-height:1.1] sm:text-5xl"
+              className="mt-3 max-w-[16ch] font-bold tracking-tight text-koby-text [font-size:clamp(2rem,9vw,2.6rem)] [line-height:1.1] sm:text-5xl"
             >
               Koby turns future business cash flow into programmable liquidity.
             </h1>
@@ -32,11 +37,11 @@ export function LandingHero() {
               with programmable repayment.
             </p>
             <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-start">
-              <Button href="/marketplace" size="lg" className="w-full text-center sm:w-auto">
-                Explore financing opportunities
-              </Button>
-              <Button href="/financing/create" variant="secondary" size="lg" className="w-full text-center sm:w-auto">
+              <Button href="/financing/create" size="lg" className="w-full text-center sm:w-auto">
                 Create financing request
+              </Button>
+              <Button href="/marketplace" variant="secondary" size="lg" className="w-full text-center sm:w-auto">
+                Explore marketplace
               </Button>
             </div>
             {/* Eyebrow rule: tighter tracking on mobile so it never overflows. */}
@@ -45,7 +50,7 @@ export function LandingHero() {
             </p>
           </Reveal>
 
-          <Reveal delay={140} className="lg:col-span-4 lg:col-start-9">
+          <Reveal delay={140} className="min-w-0 lg:col-span-4 lg:col-start-9">
             <div
               aria-label="Settlement column: fictional receivables settling into financing, crossed by settlement"
               className="koby-frame relative overflow-hidden rounded-koby-lg border border-koby-border-strong bg-koby-surface"
@@ -76,14 +81,18 @@ export function LandingHero() {
                 </div>
 
                 <div className="border-t border-koby-border pt-5">
-                  <div className="flex items-center justify-between gap-3">
+                  {/*
+                    Wrap + smaller bars on mobile: at 320px the card content
+                    is ~230px and label + 3×32px bars sit exactly at the edge.
+                  */}
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                     <TechnicalLabel className="text-koby-accent">
                       Monad settlement
                     </TechnicalLabel>
-                    <span className="flex gap-1.5" aria-hidden="true">
-                      <span className="h-2 w-8 rounded-full bg-koby-accent" />
-                      <span className="h-2 w-8 rounded-full bg-koby-accent/50" />
-                      <span className="h-2 w-8 rounded-full bg-koby-border-strong" />
+                    <span className="flex shrink-0 gap-1.5" aria-hidden="true">
+                      <span className="h-2 w-6 rounded-full bg-koby-accent sm:w-8" />
+                      <span className="h-2 w-6 rounded-full bg-koby-accent/50 sm:w-8" />
+                      <span className="h-2 w-6 rounded-full bg-koby-border-strong sm:w-8" />
                     </span>
                   </div>
                   <p className="mt-2 text-xs text-koby-text-muted">

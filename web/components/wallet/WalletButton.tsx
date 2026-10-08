@@ -155,7 +155,7 @@ export function WalletButton() {
   const primaryBusy = busy || privyBusy;
 
   return (
-    <div className="relative flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
+    <div className="relative flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
       <button
         type="button"
         onClick={() => void onPrimaryClick()}
