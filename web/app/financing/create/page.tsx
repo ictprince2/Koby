@@ -4,6 +4,13 @@
  * /financing/create — the business financing-creation flow:
  * Input -> Analysis -> Opportunity -> Review -> Monad settlement.
  *
+ * Composition: an editorial financing document, not a card dashboard.
+ * Three ledger stages (01 Business / 02 Receivables / 03 Financing)
+ * structured by oversized numbers, hairlines, and asymmetric columns;
+ * financial values set large, labels small and technical. No section sits
+ * inside a rounded card; rules and typography carry the structure.
+ *
+ * Functionality is unchanged from the previous composition:
  * - Analysis runs server-side (POST /api/analyze): live AI assessment when
  *   the provider is available, otherwise the built-in assessment.
  *   The result is advisory and terms are proposed by the business, never set
@@ -13,18 +20,15 @@
  *   moves value and happens on the position page.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { isAddress } from "viem";
 import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/StateBlocks";
-import { Metric } from "@/components/ui/Metric";
 import { ProvenanceTag } from "@/components/ui/ProvenanceTag";
+import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { FlowSteps } from "@/components/financing/FlowSteps";
-import { AnalysisCard } from "@/components/financing/AnalysisCard";
-import { ReviewCard } from "@/components/financing/ReviewCard";
 import { TxProgress } from "@/components/financing/TxProgress";
 import { useWallet } from "@/hooks/useWallet";
 import { useTx } from "@/hooks/useTx";
@@ -62,6 +66,106 @@ const DEMO_VALUES = {
 };
 
 type Phase = "input" | "analyzing" | "opportunity" | "review" | "settled";
+
+/* ---------- Editorial primitives (presentation only, page-local) ---------- */
+
+/** Quiet technical label for figures, fields, and ledger rows. */
+function Label({ children }: { children: ReactNode }) {
+  return (
+    <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+      {children}
+    </p>
+  );
+}
+
+/**
+ * Stage masthead: oversized number beside the stage name, closed by a
+ * strong rule. On mobile the number and name baseline-align in one row;
+ * the rule and whitespace carry the structure — never a card.
+ */
+function StageHead({ index, name, note }: { index: string; name: string; note?: string }) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span aria-hidden="true" className="text-5xl font-bold tabular-nums tracking-tight text-koby-text sm:text-6xl">
+          {index}
+        </span>
+        <h2 className="text-xl font-bold tracking-tight text-koby-text sm:text-2xl">{name}</h2>
+      </div>
+      {note !== undefined ? (
+        <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-koby-text-secondary">{note}</p>
+      ) : null}
+      <div aria-hidden="true" className="mt-4 border-t-2 border-koby-text" />
+    </div>
+  );
+}
+
+/** One ledger row: quiet label, large financial value, optional caption. */
+function Figure({ label, value, caption }: { label: string; value: string; caption?: string }) {
+  return (
+    <div className="min-w-0 border-t border-koby-border py-5 first:border-t-0 first:pt-0">
+      <Label>{label}</Label>
+      <p className="mt-2 text-4xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-5xl">
+        {value}
+      </p>
+      {caption !== undefined ? (
+        <p className="mt-1 text-xs text-koby-text-muted">{caption}</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Ledger term row for review/confirmation data. Monospace values. */
+function Term({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid min-w-0 gap-1 border-t border-koby-border py-4 first:border-t-0 first:pt-0 sm:grid-cols-12 sm:gap-4">
+      <dt className="sm:col-span-4">
+        <Label>{label}</Label>
+      </dt>
+      <dd className="min-w-0 font-mono text-sm break-all text-koby-text sm:col-span-8">{children}</dd>
+    </div>
+  );
+}
+
+const INPUT_CLASS =
+  "mt-2 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text";
+const MONEY_INPUT_CLASS =
+  "mt-2 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-3 text-2xl font-bold tabular-nums text-koby-text sm:text-3xl";
+
+/** Structured field: technical label over its control, ruled off. */
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block min-w-0 border-t border-koby-border py-5 first:border-t-0 first:pt-0">
+      <span className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+        {label}
+        {hint !== undefined ? <span className="normal-case tracking-normal"> — {hint}</span> : null}
+      </span>
+      <span className="block">{children}</span>
+    </label>
+  );
+}
+
+/** Engine display name per analysis response source. */
+function engineName(result: AnalysisResponse): string {
+  if (result.source === "openrouter") {
+    const modelId = result.model.replace(/\s*\(.*\)$/, "").trim();
+    return modelId === "" ? "OpenRouter" : `OpenRouter · ${modelId}`;
+  }
+  if (result.source === "kimi") {
+    return "Kimi";
+  }
+  return "Koby assessment";
+}
+
+/* ------------------------------- Page ---------------------------------- */
 
 export default function CreateFinancingPage() {
   const { address, isCorrectNetwork, provider, status } = useWallet();
@@ -225,139 +329,298 @@ export default function CreateFinancingPage() {
   const stepIndex = phase === "input" || phase === "analyzing" ? 0 : phase === "opportunity" ? 2 : phase === "review" ? 3 : 4;
 
   return (
-    <Container className="py-10">
-      <h1 className="text-3xl font-bold tracking-tight text-koby-text">Create financing request</h1>
-      <p className="mt-2 max-w-2xl text-sm text-koby-text-secondary">
-        Koby turns future business cash flow into programmable liquidity. Describe the receivables,
-        review the cash-flow assessment, accept terms, and record the financing opportunity on Monad.
+    <Container className="py-10 sm:py-14">
+      <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+        Financing — New request
       </p>
-      <div className="mt-4">
+      <h1 className="mt-3 max-w-[20ch] text-4xl font-bold tracking-tight text-koby-text sm:text-5xl">
+        Create financing request
+      </h1>
+      <p className="mt-3 max-w-[58ch] text-base leading-relaxed text-koby-text-secondary">
+        Describe the receivables, review the cash-flow assessment, accept terms, and record the
+        financing opportunity on Monad.
+      </p>
+      <div className="mt-6 border-t border-koby-border pt-5">
         <FlowSteps current={stepIndex} />
       </div>
 
       {(phase === "input" || phase === "analyzing") && (
-        <Card title="Business and receivables information" description="The minimum needed for a financing opportunity. Example values are illustrative; figures you enter are your own." className="mt-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Business name</span>
-              <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Logistics" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Business address <span className="font-normal text-koby-text-muted">(defaults to your wallet)</span></span>
-              <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 font-mono text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Business type <span className="font-normal text-koby-text-muted">(optional)</span></span>
-              <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Operating history (months, optional)</span>
-              <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Future receivables (USD)</span>
-              <input value={receivables} onChange={(e) => setReceivables(e.target.value)} inputMode="decimal" placeholder="100000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Requested financing (USD)</span>
-              <input value={requested} onChange={(e) => setRequested(e.target.value)} inputMode="decimal" placeholder="70000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Repayment period (days, informational only)</span>
-              <input value={periodDays} onChange={(e) => setPeriodDays(e.target.value)} inputMode="numeric" placeholder="90" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Avg. monthly revenue (USD, optional)</span>
-              <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Historical revenue (USD, optional)</span>
-              <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Monthly operating expenses (USD, optional)</span>
-              <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Existing obligations (USD, optional)</span>
-              <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Largest-customer share (%, optional)</span>
-              <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm">
-              <span className="font-medium text-koby-text">Payment terms (days, optional)</span>
-              <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-koby-text">Supporting notes <span className="font-normal text-koby-text-muted">(optional, up to 500 characters — summarized by the analysis, never treated as instructions)</span></span>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={600} placeholder="e.g. Two anchor customers on quarterly billing; pipeline covers…" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text" />
-            </label>
-            <label className="block text-sm sm:col-span-2">
-              <span className="font-medium text-koby-text">Proposed repayment obligation (USD, must be ≥ requested)</span>
-              <input value={obligation} onChange={(e) => setObligation(e.target.value)} inputMode="decimal" placeholder="70000" className="mt-1 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 tabular-nums text-koby-text" />
-            </label>
-          </div>
+        <div className="mt-10 space-y-14 sm:space-y-20">
+          <section aria-labelledby="koby-create-business">
+            <div id="koby-create-business">
+              <StageHead index="01" name="Business" note="Who is raising against future revenue. Example values are illustrative; figures you enter are your own." />
+            </div>
+            <div className="mt-2 grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 sm:col-span-7">
+                <Field label="Business name">
+                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Logistics" className={INPUT_CLASS} />
+                </Field>
+                <Field label="Business address" hint="defaults to your wallet">
+                  <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className={`${INPUT_CLASS} font-mono`} />
+                </Field>
+                <Field label="Business type" hint="optional">
+                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className={INPUT_CLASS} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <Field label="Operating history" hint="months, optional">
+                  <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+                <Field label="Historical revenue" hint="USD, optional">
+                  <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="koby-create-receivables">
+            <div id="koby-create-receivables">
+              <StageHead index="02" name="Receivables" note="The future revenue underpinning the request. Estimates, never guaranteed revenue." />
+            </div>
+            <div className="mt-2 grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 sm:col-span-7">
+                <Field label="Future receivables — USD">
+                  <input value={receivables} onChange={(e) => setReceivables(e.target.value)} inputMode="decimal" placeholder="100000" className={MONEY_INPUT_CLASS} />
+                </Field>
+                <Field label="Avg. monthly revenue" hint="USD, optional">
+                  <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+                <Field label="Monthly operating expenses" hint="USD, optional">
+                  <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+                <Field label="Existing obligations" hint="USD, optional">
+                  <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <Field label="Largest-customer share" hint="%, optional">
+                  <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+                <Field label="Payment terms" hint="days, optional">
+                  <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+                <Field label="Repayment period" hint="days, informational only">
+                  <input value={periodDays} onChange={(e) => setPeriodDays(e.target.value)} inputMode="numeric" placeholder="90" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+                <Field label="Supporting notes" hint="optional, up to 500 characters — summarized by the analysis, never treated as instructions">
+                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={600} placeholder="e.g. Two anchor customers on quarterly billing; pipeline covers…" className={INPUT_CLASS} />
+                </Field>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="koby-create-financing">
+            <div id="koby-create-financing">
+              <StageHead index="03" name="Financing" note="The liquidity asked against the receivables above. The assessment is advisory; you propose the terms." />
+            </div>
+            <div className="mt-2 grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 sm:col-span-7">
+                <Field label="Requested liquidity — USD">
+                  <input value={requested} onChange={(e) => setRequested(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
+                </Field>
+                <Field label="Proposed repayment obligation — USD" hint="must be ≥ requested">
+                  <input value={obligation} onChange={(e) => setObligation(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <div className="border-t border-koby-border py-5 sm:first:border-t-0 sm:first:pt-0">
+                  <Label>Assessment</Label>
+                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">
+                    Continuing runs the cash-flow assessment against everything above. Nothing is
+                    submitted onchain at this stage.
+                  </p>
+                  <div className="mt-5 flex flex-col gap-3">
+                    <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"} size="lg" className="w-full">
+                      {phase === "analyzing" ? "Analyzing cash flow…" : "Continue to assessment →"}
+                    </Button>
+                    <Button variant="secondary" onClick={fillDemo} className="w-full">
+                      Fill example values
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           {formErrors.length > 0 ? (
-            <div role="alert" className="mt-4 rounded-koby-sm border border-koby-error p-3 text-sm text-koby-text-secondary">
-              <p className="font-semibold text-koby-error">Check the following:</p>
-              <ul className="mt-1 list-disc pl-5">{formErrors.map((e) => <li key={e}>{e}</li>)}</ul>
+            <div role="alert" className="border-t-2 border-koby-error pt-4">
+              <p className="text-base font-semibold text-koby-error">Check the following:</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">{formErrors.map((e) => <li key={e}>{e}</li>)}</ul>
             </div>
           ) : null}
           {analysisError ? (
-            <div role="alert" className="mt-4 rounded-koby-sm border border-koby-error p-3 text-sm text-koby-text-secondary">{analysisError}</div>
+            <div role="alert" className="border-t-2 border-koby-error pt-4 text-sm text-koby-text-secondary">{analysisError}</div>
           ) : null}
-          <div className="mt-5 flex flex-wrap gap-2">
-            <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"}>
-              {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow"}
-            </Button>
-            <Button variant="secondary" onClick={fillDemo}>
-              Fill example values
-            </Button>
-          </div>
           {phase === "analyzing" ? <LoadingState message="Analyzing cash flow — running the assessment methodology…" /> : null}
-        </Card>
+        </div>
       )}
 
       {phase === "opportunity" && analysis && (
-        <div className="mt-6 space-y-6">
-          <AnalysisCard result={analysis} />
-          <Card title="Financing opportunity" description="Proposed by the business. The assessment above is advisory and does not set these terms.">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-10 space-y-14 sm:space-y-20">
+          <section aria-labelledby="koby-create-assessment">
+            <div id="koby-create-assessment">
+              <StageHead index="04" name="Assessment" note="Advisory only. It does not approve financing, set terms, guarantee repayment, or authorize any transaction." />
+            </div>
+            <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <Label>Analysis engine</Label>
+              <span className="font-mono text-sm text-koby-text">{engineName(analysis)}</span>
+              <ProvenanceTag source="AI Analysis" />
+            </div>
+            {analysis.source === "deterministic-fallback" ? (
+              <p className="mt-2 text-xs text-koby-text-muted">Live AI analysis currently unavailable.</p>
+            ) : null}
+            <div className="mt-6 grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 border-t border-koby-border py-5 sm:col-span-6">
+                <Label>Assessment score</Label>
+                <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text sm:text-6xl">
+                  {analysis.assessment.score}
+                  <span className="text-xl font-medium text-koby-text-muted"> / 100</span>
+                </p>
+              </div>
+              <div className="min-w-0 border-t border-koby-border py-5 sm:col-span-6">
+                <Label>Model confidence</Label>
+                <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-koby-text sm:text-6xl">
+                  {analysis.assessment.confidence}
+                  <span className="text-xl font-medium text-koby-text-muted">%</span>
+                </p>
+                <p className="mt-1 text-xs text-koby-text-muted">
+                  Confidence reflects data completeness, not a guarantee of outcome.
+                </p>
+              </div>
+            </div>
+            <div className="grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 sm:col-span-7">
+                <div className="border-t border-koby-border py-5">
+                  <Label>Key factors</Label>
+                  <ul className="mt-3 space-y-3">
+                    {analysis.assessment.factors.map((factor) => (
+                      <li key={factor} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text first:border-t-0 first:pt-0">
+                        {factor}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="border-t border-koby-border py-5">
+                  <Label>Revenue &amp; request</Label>
+                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.revenueSummary}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.requestedFinancingSummary}</p>
+                </div>
+                <div className="border-t border-koby-border py-5">
+                  <Label>Cash-flow observations</Label>
+                  <ul className="mt-3 space-y-3">
+                    {analysis.detail.cashFlowObservations.map((o) => (
+                      <li key={o} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text-secondary first:border-t-0 first:pt-0">
+                        {o}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="border-t border-koby-border py-5">
+                  <Label>Key findings</Label>
+                  <ul className="mt-3 space-y-3">
+                    {analysis.detail.keyFindings.map((o) => (
+                      <li key={o} className="border-t border-koby-border pt-3 text-sm leading-relaxed text-koby-text-secondary first:border-t-0 first:pt-0">
+                        {o}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <div className="border-t-2 border-koby-text py-5">
+                  <Label>Recommendation</Label>
+                  <p className="mt-3 text-xl leading-snug font-medium tracking-tight text-koby-text">
+                    “{analysis.assessment.recommendation}”
+                  </p>
+                </div>
+                <div className="border-t border-koby-border py-5">
+                  <Label>Consistency &amp; trend</Label>
+                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.consistencyTrend}</p>
+                </div>
+                <div className="border-t border-koby-border py-5">
+                  <Label>Concentration</Label>
+                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.concentrationNotes}</p>
+                </div>
+                <div className="border-t border-koby-border py-5">
+                  <Label>Repayment capacity</Label>
+                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.repaymentCapacity}</p>
+                </div>
+                {analysis.detail.inconsistencies.length > 0 ? (
+                  <div className="border-t border-koby-border py-5">
+                    <Label>Inconsistencies &amp; risk indicators</Label>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-koby-text-secondary">
+                      {analysis.detail.inconsistencies.map((o) => (
+                        <li key={o}>{o}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {analysis.detail.missingInfo.length > 0 ? (
+                  <div className="border-t border-koby-border py-5">
+                    <Label>Missing information</Label>
+                    <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">
+                      Not provided: {analysis.detail.missingInfo.join("; ")}. Supplying these would improve the analysis.
+                    </p>
+                  </div>
+                ) : null}
+                <div className="border-t border-koby-border py-5">
+                  <Label>Reviewer note</Label>
+                  <p className="mt-2 text-sm font-medium text-koby-text">Human/financier review required.</p>
+                  <p className="mt-1 text-sm leading-relaxed text-koby-text-secondary">{analysis.detail.reviewerNote}</p>
+                  <p className="mt-3 text-xs leading-relaxed text-koby-text-muted">{analysis.detail.confidenceLimitations}</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="koby-create-opportunity">
+            <div id="koby-create-opportunity">
+              <StageHead index="05" name="Opportunity" note="Proposed by the business. The assessment above is advisory and does not set these terms." />
+            </div>
+            <div className="mt-2">
               <ProvenanceTag source="User Provided" />
             </div>
-            <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <Metric label="Future receivables" value={`$${formatCentsToUsd(parseUsdToCents(receivables) ?? 0n)}`} provenance="User Provided" />
-              <Metric label="Requested liquidity" value={`$${formatCentsToUsd(parseUsdToCents(requested) ?? 0n)}`} provenance="User Provided" />
-              <Metric label="Advisory eligible" value={`$${analysis.eligibleAmountUsd}`} caption="Assessment guidance, not an offer" />
-              <Metric label="Repayment period" value={`${periodDays} days`} caption="Informational only" />
-            </dl>
-            <p className="mt-3 font-mono text-xs text-koby-text-muted">
-              Financing ratio: {(analysis.financingRatioBps / 100).toFixed(2)}% · Proposed obligation: ${formatCentsToUsd(parseUsdToCents(obligation) ?? 0n)}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button onClick={() => setPhase("review")}>Review financing terms</Button>
-              <Button variant="secondary" onClick={() => setPhase("input")}>Back to input</Button>
+            <div className="mt-6">
+              <Figure label="Future receivables" value={`$${formatCentsToUsd(parseUsdToCents(receivables) ?? 0n)}`} caption="Business-submitted estimate" />
+              <Figure label="Requested liquidity" value={`$${formatCentsToUsd(parseUsdToCents(requested) ?? 0n)}`} caption={`Advisory eligible: $${analysis.eligibleAmountUsd} — guidance, not an offer`} />
+              <Figure label="Proposed obligation" value={`$${formatCentsToUsd(parseUsdToCents(obligation) ?? 0n)}`} caption={`Financing ratio: ${(analysis.financingRatioBps / 100).toFixed(2)}% · Repayment period: ${periodDays} days (informational only)`} />
             </div>
-          </Card>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button onClick={() => setPhase("review")} size="lg" className="w-full sm:w-auto">Review financing terms</Button>
+              <Button variant="secondary" onClick={() => setPhase("input")} size="lg" className="w-full sm:w-auto">Back to input</Button>
+            </div>
+          </section>
         </div>
       )}
 
       {phase === "review" && (
-        <div className="mt-6 space-y-6">
-          <ReviewCard
-            action={`Create ${principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : ""} financing`}
-            amount={principalBase !== null ? `${formatBaseUnits(principalBase, USDC_DECIMALS)} (testnet USDC)` : "—"}
-            contractLabel="Koby financing contract"
-            terms={[
-              { label: "Business", value: effectiveBusiness || "—" },
-              { label: "Principal (financing amount)", value: principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : "—" },
-              { label: "Repayment obligation", value: obligationBase !== null ? formatBaseUnits(obligationBase, USDC_DECIMALS) : "—" },
-              { label: "Repayment period", value: `${periodDays} days (informational only)` },
-              { label: "Wallet", value: address ?? "Not connected" },
-            ]}
-          />
+        <div className="mt-10 space-y-14 sm:space-y-20">
+          <section aria-labelledby="koby-create-review">
+            <div id="koby-create-review">
+              <StageHead index="06" name="Review & settle" note="This action will create the financing position on Monad. Read carefully before signing." />
+            </div>
+            <div className="mt-6">
+              <Figure label="Action" value={`Create ${principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : ""} financing`} />
+            </div>
+            <dl className="mt-2">
+              <Term label="Amount">{principalBase !== null ? `${formatBaseUnits(principalBase, USDC_DECIMALS)} (testnet USDC)` : "—"}</Term>
+              <Term label="Token">Testnet USDC (6 decimals)</Term>
+              <Term label="Network">{monadConfig.chainName} · chain ID {monadConfig.chainId}</Term>
+              <Term label="Target contract">
+                {monadConfig.contractAddress ? (
+                  <AddressDisplay value={monadConfig.contractAddress} label="Koby financing contract" />
+                ) : (
+                  <span className="text-koby-error">Contract not configured</span>
+                )}
+              </Term>
+              <Term label="Business">{effectiveBusiness || "—"}</Term>
+              <Term label="Principal">{principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : "—"}</Term>
+              <Term label="Repayment obligation">{obligationBase !== null ? formatBaseUnits(obligationBase, USDC_DECIMALS) : "—"}</Term>
+              <Term label="Repayment period">{`${periodDays} days (informational only)`}</Term>
+              <Term label="Wallet">{address ?? "Not connected"}</Term>
+            </dl>
+          </section>
+
           {!configured ? (
             <ErrorState
               title="Financing contract is not deployed yet"
@@ -368,11 +631,11 @@ export default function CreateFinancingPage() {
           ) : !isCorrectNetwork ? (
             <ErrorState title="Wrong network" message={`Your wallet is not on ${monadConfig.chainName}. Switch networks to create this financing position. No transaction was prepared.`} />
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void createOnchain()} disabled={tx.state === "preparing" || tx.state === "awaiting_wallet" || tx.state === "submitted" || tx.state === "confirming"} loading={tx.state !== "idle" && tx.state !== "failed" && tx.state !== "confirmed"}>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button onClick={() => void createOnchain()} disabled={tx.state === "preparing" || tx.state === "awaiting_wallet" || tx.state === "submitted" || tx.state === "confirming"} loading={tx.state !== "idle" && tx.state !== "failed" && tx.state !== "confirmed"} size="lg" className="w-full sm:w-auto">
                 {tx.state === "idle" || tx.state === "failed" ? `Create ${principalBase !== null ? formatBaseUnits(principalBase, USDC_DECIMALS) : ""} financing on Monad` : "Creating…"}
               </Button>
-              <Button variant="secondary" onClick={() => { reset(); setPhase("opportunity"); }}>Back to opportunity</Button>
+              <Button variant="secondary" onClick={() => { reset(); setPhase("opportunity"); }} size="lg" className="w-full sm:w-auto">Back to opportunity</Button>
             </div>
           )}
           <TxProgress tx={tx} label="Create financing" />
@@ -385,28 +648,37 @@ export default function CreateFinancingPage() {
       )}
 
       {phase === "settled" && createdId !== null && (
-        <Card title="Financing position created" description="Settlement confirmed. The position below reflects real onchain state." className="mt-6">
-          <p className="text-sm text-koby-text-secondary">
-            Position <span className="font-mono font-semibold text-koby-text">#{createdId.toString()}</span> now exists on {monadConfig.chainName}.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button href={`/financing/${createdId.toString()}`}>Open financing position</Button>
-            <Button variant="secondary" href="/marketplace">View marketplace</Button>
+        <section aria-labelledby="koby-create-settled" className="mt-10">
+          <div id="koby-create-settled">
+            <StageHead index="07" name="Position created" note="Settlement confirmed. The position below reflects real onchain state." />
           </div>
-        </Card>
+          <p className="mt-6 text-2xl font-bold tracking-tight text-koby-text">
+            Position <span className="font-mono">#{createdId.toString()}</span>
+          </p>
+          <p className="mt-1 font-mono text-xs text-koby-text-muted">now exists on {monadConfig.chainName}</p>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button href={`/financing/${createdId.toString()}`} size="lg" className="w-full text-center sm:w-auto">Open financing position</Button>
+            <Button variant="secondary" href="/marketplace" size="lg" className="w-full text-center sm:w-auto">View marketplace</Button>
+          </div>
+        </section>
       )}
       {tx.state === "confirmed" && phase === "review" && createdId === null && (
-        <Card title="Settlement confirmed" description="Reading the new position from the confirmed transaction…" className="mt-6">
-          <LoadingState message="Settlement confirmed on Monad. Reading the new position from the confirmed transaction…" />
+        <section aria-labelledby="koby-create-confirming" className="mt-10">
+          <div id="koby-create-confirming">
+            <StageHead index="07" name="Settlement confirmed" note="Reading the new position from the confirmed transaction…" />
+          </div>
+          <div className="mt-4">
+            <LoadingState message="Settlement confirmed on Monad. Reading the new position from the confirmed transaction…" />
+          </div>
           {tx.hash ? (
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Button href="/marketplace" variant="secondary">View marketplace</Button>
             </div>
           ) : null}
-          <p className="mt-2 text-xs text-koby-text-muted">
+          <p className="mt-4 text-xs text-koby-text-muted">
             If the position does not resolve, find it in the marketplace or via the transaction on the explorer. <Link href="/marketplace" className="underline">Marketplace</Link>
           </p>
-        </Card>
+        </section>
       )}
     </Container>
   );
