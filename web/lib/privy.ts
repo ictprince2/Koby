@@ -1,20 +1,28 @@
 /**
- * Privy helpers — App-ID gating, Monad chain derivation, and provider
- * adaptation (ARCHITECTURE.md Section 9).
+ * Privy helpers — App-ID gating, Monad chain derivation, and the EIP-1193
+ * provider interface Koby standardizes on (ARCHITECTURE.md Section 9).
  *
- * This module is server-safe: pure functions over environment names and the
- * existing Monad configuration. It never imports the Privy SDK, so the
- * injected-wallet flow works identically when Privy is unconfigured.
+ * This module is server-safe: pure functions and types over environment
+ * names and the existing Monad configuration. It never imports the Privy
+ * SDK.
  *
  * Koby's Monad values live in exactly one place (lib/monad.ts). The chain
  * object below is derived from it, never duplicated.
  */
 
 import { monadConfig } from "@/lib/monad";
-import type { Eip1193Provider } from "@/lib/wallets";
 
-/** Discovery-id prefix for Privy-surfaced wallets. Never collides with EIP-6963 rdns ids. */
-export const PRIVY_WALLET_ID_PREFIX = "privy:";
+/**
+ * Minimal EIP-1193 interface Koby uses: account/chain reads, network
+ * switching, and transaction submission. Privy-session wallet providers
+ * are adapted to this shape; the viem transaction path
+ * (services/financing.ts) only ever sees this interface.
+ */
+export type Eip1193Provider = {
+  request: (args: { method: string; params?: unknown }) => Promise<unknown>;
+  on?: (event: string, listener: (...args: unknown[]) => void) => void;
+  removeListener?: (event: string, listener: (...args: unknown[]) => void) => void;
+};
 
 function nonEmpty(value: string | undefined): string | null {
   if (value === undefined) return null;
@@ -27,7 +35,7 @@ export function privyAppId(): string | null {
   return nonEmpty(process.env.NEXT_PUBLIC_PRIVY_APP_ID);
 }
 
-/** True only when Privy onboarding can be offered. Injected wallets always work regardless. */
+/** True only when Privy onboarding can be offered. */
 export function isPrivyConfigured(): boolean {
   return privyAppId() !== null;
 }
@@ -45,16 +53,6 @@ export const monadChainForPrivy = {
   blockExplorers: { default: { name: "MonadVision", url: monadConfig.explorerUrl } },
   testnet: true,
 } as const;
-
-/** Stable discovery id for a Privy-surfaced wallet address. */
-export function toPrivyEntryId(address: string): string {
-  return `${PRIVY_WALLET_ID_PREFIX}${address.toLowerCase()}`;
-}
-
-/** True only for wallet ids surfaced through Privy (never injected discoveries). */
-export function isPrivyEntryId(id: string | null): boolean {
-  return id !== null && id.startsWith(PRIVY_WALLET_ID_PREFIX);
-}
 
 /**
  * Parse a CAIP-2 chain id ("eip155:10143") as used by Privy wallets.

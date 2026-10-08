@@ -11,15 +11,16 @@ import { monadChainForPrivy, privyAppId } from "@/lib/privy";
  * RootLayout (server)
  * └─ Providers (client)
  *    └─ PrivyProvider (client, only when NEXT_PUBLIC_PRIVY_APP_ID is set)
- *       └─ WalletProvider (in AppShell — Koby's wallet abstraction)
+ *       └─ WalletProvider (in AppShell — Koby's Privy-backed wallet state)
  *          └─ AppShell / Koby UI
  *
- * Privy is wallet/identity/signing onboarding; viem remains the blockchain
- * interaction layer and lib/monad.ts remains the chain source of truth
- * (monadChainForPrivy is derived from it, never duplicated).
+ * Privy is the single wallet connection authority: onboarding, selection,
+ * state, and disconnect. viem remains the blockchain interaction layer and
+ * lib/monad.ts remains the chain source of truth (monadChainForPrivy is
+ * derived from it, never duplicated).
  *
  * When no App ID is configured, children render without Privy and the
- * existing injected-wallet flow works exactly as before.
+ * wallet context honestly reports that connection is unavailable.
  */
 const privyConfig = {
   defaultChain: monadChainForPrivy,
@@ -41,7 +42,7 @@ export function Providers({ children }: { children: ReactNode }) {
   if (!appId) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
-        "[koby] NEXT_PUBLIC_PRIVY_APP_ID is not set — Privy onboarding is disabled; injected wallets still work.",
+        "[koby] NEXT_PUBLIC_PRIVY_APP_ID is not set — Privy onboarding is disabled; wallet connection will report unavailable.",
       );
     }
     return <>{children}</>;
