@@ -4,11 +4,10 @@
  * /financing/create — the business financing-creation flow:
  * Input -> Analysis -> Opportunity -> Review -> Monad settlement.
  *
- * Presentation: an institutional financing workspace, not an onboarding
- * form. Numbered sections separated by thin rules, compact 2-column
- * field grids, units carried by the controls, hierarchy through
- * typography — no cards, no instructional paragraphs. Labels do the
- * talking; tiny monospace metadata appears only where genuinely needed
+ * Presentation: an institutional financing workspace. Typographic scale
+ * does the work — large tabular financial figures, strong section titles,
+ * quiet labels, underline data-entry controls, horizontal rules instead of
+ * cards. Tiny monospace metadata appears only where genuinely needed
  * (wallet relationship, informational duration).
  *
  * Behavior is unchanged:
@@ -29,9 +28,8 @@ import Link from "next/link";
 import { isAddress } from "viem";
 import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/Button";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/StateBlocks";
+import { ErrorState, LoadingState } from "@/components/ui/StateBlocks";
 import { ProvenanceTag } from "@/components/ui/ProvenanceTag";
-import { FlowSteps } from "@/components/financing/FlowSteps";
 import { AnalysisCard } from "@/components/financing/AnalysisCard";
 import { ReviewCard } from "@/components/financing/ReviewCard";
 import { TxProgress } from "@/components/financing/TxProgress";
@@ -84,32 +82,98 @@ function Label({ children }: { children: ReactNode }) {
 }
 
 /**
- * StageHead — numbered section heading closed by a thin rule:
- * "01 — BUSINESS" with a hairline beneath. No explanatory note; the
- * fields below carry the meaning. `index` is omitted for unnumbered
- * action blocks (e.g. ASSESSMENT).
+ * StageHead — section title with authority: small mono index beside a
+ * strong editorial heading, closed by a horizontal rule. No explanatory
+ * note; the workspace below carries the meaning. `index` is omitted for
+ * unnumbered blocks (e.g. ASSESSMENT).
  */
 function StageHead({ index, name }: { index?: string; name: string }) {
   return (
     <div>
-      <p className="font-mono text-xs font-semibold tracking-[0.18em] text-koby-text uppercase">
-        {index !== undefined ? `${index} — ${name}` : name}
-      </p>
-      <div aria-hidden="true" className="mt-3 border-t border-koby-border-strong" />
+      <div className="flex items-baseline gap-4">
+        {index !== undefined ? (
+          <span
+            aria-hidden="true"
+            className="font-mono text-sm font-medium tabular-nums text-koby-text-muted"
+          >
+            {index}
+          </span>
+        ) : null}
+        <h2 className="text-xl font-bold tracking-tight text-koby-text sm:text-2xl">{name}</h2>
+      </div>
+      <div aria-hidden="true" className="mt-4 border-t border-koby-border-strong" />
     </div>
   );
 }
 
-/** One ledger figure. Exactly one hero per view (DESIGN.md Section 8). */
+/**
+ * ProcessRail — the lifecycle as a status rail, not step cards: five
+ * ruled cells, small type, the active cell edged in accent. Text and
+ * position carry state, never color alone.
+ */
+const RAIL_STEPS = ["Input", "Analysis", "Opportunity", "Settlement", "Repayment"] as const;
+
+function ProcessRail({ current }: { current: number }) {
+  return (
+    <ol
+      aria-label="Financing progress"
+      className="koby-no-scrollbar flex gap-6 overflow-x-auto sm:grid sm:grid-cols-5 sm:gap-8 sm:overflow-visible"
+    >
+      {RAIL_STEPS.map((label, step) => {
+        const done = step < current;
+        const active = step === current;
+        return (
+          <li
+            key={label}
+            aria-current={active ? "step" : undefined}
+            className="min-w-[7rem] shrink-0 sm:min-w-0"
+          >
+            <div
+              aria-hidden="true"
+              className={
+                active
+                  ? "border-t-2 border-koby-accent"
+                  : done
+                    ? "border-t-2 border-koby-success"
+                    : "border-t border-koby-border"
+              }
+            />
+            <p className="mt-2 flex items-baseline gap-2">
+              <span className="font-mono text-[11px] tabular-nums text-koby-text-muted">
+                {String(step + 1).padStart(2, "0")}
+              </span>
+              <span
+                className={
+                  active || done
+                    ? "text-sm font-semibold text-koby-text"
+                    : "text-sm font-medium text-koby-text-muted"
+                }
+              >
+                {label}
+              </span>
+              {done ? (
+                <span aria-hidden="true" className="text-xs text-koby-success">
+                  ✓
+                </span>
+              ) : null}
+            </p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Ledger figures. The hero figure is the largest number on screen. */
 function Figure({ label, value, caption, hero }: { label: string; value: string; caption?: string; hero?: boolean }) {
   return (
-    <div className="min-w-0 border-t border-koby-border py-5 first:border-t-0 first:pt-0">
+    <div className="min-w-0 border-t border-koby-border py-6 first:border-t-0 first:pt-0">
       <Label>{label}</Label>
       <p
         className={
           hero === true
-            ? "mt-2 text-4xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-5xl"
-            : "mt-2 text-2xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-3xl"
+            ? "mt-2 text-5xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-6xl"
+            : "mt-2 text-3xl font-bold break-words tabular-nums tracking-tight text-koby-text sm:text-4xl"
         }
       >
         {value}
@@ -121,17 +185,20 @@ function Figure({ label, value, caption, hero }: { label: string; value: string;
   );
 }
 
+/**
+ * Underline data-entry controls: no boxes, no shadows — a bottom rule,
+ * strong confident type, accent on focus. Financial controls scale up to
+ * figure size. Units sit at the control's right edge.
+ */
 const INPUT_CLASS =
-  "block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 pr-14 text-koby-text";
+  "block w-full border-b border-koby-border-strong bg-transparent px-0 py-2 pr-14 text-lg font-medium text-koby-text placeholder:text-koby-text-muted focus:border-koby-accent focus:outline-none";
 const MONEY_INPUT_CLASS =
-  "block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-3 pr-16 text-2xl font-bold tabular-nums text-koby-text sm:text-3xl";
+  "block w-full border-b border-koby-border-strong bg-transparent px-0 py-3 pr-16 text-3xl font-bold tabular-nums tracking-tight text-koby-text placeholder:text-koby-text-muted focus:border-koby-accent focus:outline-none sm:text-4xl";
 
 /**
- * Field — compact labeled control on a ruled row. The unit (USD, %, days,
- * months) sits inside the control's right edge instead of being explained
- * in prose. `meta` is a single tiny monospace line for the rare case that
- * genuinely needs it (wallet relationship, informational duration) — not a
- * per-field instruction manual.
+ * Field — small precise label over its control, no box, no per-field
+ * instruction. `meta` is reserved for the rare line that genuinely
+ * matters (wallet relationship, informational duration).
  */
 function Field({
   label,
@@ -145,17 +212,17 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <label className="block min-w-0 border-t border-koby-border py-5 first:border-t-0 first:pt-0">
+    <label className="block min-w-0 py-5">
       <span className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
         {label}
       </span>
-      <span className="mt-2 block">
+      <span className="mt-1 block">
         {unit !== undefined ? (
           <span className="relative block">
             {children}
             <span
               aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-xs text-koby-text-muted"
+              className="pointer-events-none absolute top-1/2 right-0 -translate-y-1/2 font-mono text-xs text-koby-text-muted"
             >
               {unit}
             </span>
@@ -176,8 +243,17 @@ function Field({
 /* ------------------------------- Page ---------------------------------- */
 
 export default function CreateFinancingPage() {
-  const { address, isCorrectNetwork, provider, status } = useWallet();
+  const {
+    address,
+    isCorrectNetwork,
+    provider,
+    status,
+    privyAvailable,
+    connectPrivy,
+    connectInjected,
+  } = useWallet();
   const { tx, run, reset } = useTx();
+  const [connectBusy, setConnectBusy] = useState(false);
 
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
@@ -345,56 +421,76 @@ export default function CreateFinancingPage() {
 
   const stepIndex = phase === "input" || phase === "analyzing" ? 0 : phase === "opportunity" ? 2 : phase === "review" ? 3 : 4;
 
+  // Settlement-time connect only: input, analysis, and opportunity review
+  // never ask for a wallet. Uses the existing wallet authority unchanged —
+  // Privy primary, injected fallback — surfaced here as an explicit step.
+  async function connectForSettlement() {
+    if (connectBusy || status === "connecting") return;
+    setConnectBusy(true);
+    try {
+      if (privyAvailable) await connectPrivy();
+      else await connectInjected();
+    } finally {
+      setConnectBusy(false);
+    }
+  }
+
   return (
     <Container className="py-10 sm:py-14">
-      <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
-        Create financing request
+      <p className="font-mono text-[11px] font-medium tracking-[0.2em] text-koby-text-muted uppercase">
+        Financing / New request
       </p>
-      <h1 className="mt-3 max-w-[20ch] text-4xl font-bold tracking-tight text-koby-text sm:text-5xl">
+      <h1 className="mt-3 max-w-[20ch] text-3xl font-bold tracking-tight text-koby-text sm:text-4xl">
         Create financing request
       </h1>
-      <p className="mt-3 max-w-[58ch] text-base leading-relaxed text-koby-text-secondary">
+      <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-koby-text-secondary">
         Submit future receivables for assessment and structure a financing opportunity on Monad.
       </p>
-      <div className="mt-6 border-t border-koby-border pt-5">
-        <FlowSteps current={stepIndex} />
+      <div className="mt-8">
+        <ProcessRail current={stepIndex} />
       </div>
 
       {(phase === "input" || phase === "analyzing") && (
-        <div className="mt-10 space-y-14 sm:space-y-16">
+        <div className="mt-12 space-y-16 sm:space-y-20">
           <section aria-labelledby="koby-create-business">
             <div id="koby-create-business">
               <StageHead index="01" name="Business" />
             </div>
-            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
-              <Field label="Business name">
-                <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Logistics" className={INPUT_CLASS} />
-              </Field>
-              <Field label="Business type">
-                <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className={INPUT_CLASS} />
-              </Field>
-            </div>
-            <div className="mt-2 min-w-0">
-              <Field
-                label="Business address"
-                meta={
-                  businessAddress.trim() !== ""
-                    ? undefined
-                    : address
-                      ? `Defaults to connected wallet ${truncateHex(address)}`
-                      : "No wallet connected — needed only at settlement"
-                }
-              >
-                <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className={`${INPUT_CLASS} font-mono`} />
-              </Field>
-            </div>
-            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
-              <Field label="Operating history" unit="months">
-                <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
-              <Field label="Historical revenue" unit="USD">
-                <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
+            <div className="mt-4 grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 sm:col-span-7">
+                <Field label="Business name">
+                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Logistics" className={INPUT_CLASS} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <Field label="Business type">
+                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className={INPUT_CLASS} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-7">
+                <Field
+                  label="Business address"
+                  meta={
+                    businessAddress.trim() !== ""
+                      ? undefined
+                      : address
+                        ? `Defaults to connected wallet ${truncateHex(address)}`
+                        : "No wallet connected — needed only at settlement"
+                  }
+                >
+                  <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className={`${INPUT_CLASS} font-mono`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <Field label="Operating history" unit="months">
+                  <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <Field label="Historical revenue" unit="USD">
+                  <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
             </div>
           </section>
 
@@ -402,34 +498,46 @@ export default function CreateFinancingPage() {
             <div id="koby-create-receivables">
               <StageHead index="02" name="Receivables" />
             </div>
-            <div className="mt-2 min-w-0">
-              <Field label="Future receivables" unit="USD">
-                <input value={receivables} onChange={(e) => setReceivables(e.target.value)} inputMode="decimal" placeholder="100000" className={MONEY_INPUT_CLASS} />
-              </Field>
-            </div>
-            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
-              <Field label="Avg. monthly revenue" unit="USD">
-                <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
-              <Field label="Monthly operating expenses" unit="USD">
-                <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
-              <Field label="Existing obligations" unit="USD">
-                <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
-              <Field label="Largest-customer share" unit="%">
-                <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
-              <Field label="Payment terms" unit="days">
-                <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
-              <Field label="Repayment period" unit="days" meta="Informational — not enforced onchain">
-                <input value={periodDays} onChange={(e) => setPeriodDays(e.target.value)} inputMode="numeric" placeholder="90" className={`${INPUT_CLASS} tabular-nums`} />
-              </Field>
+            <div className="mt-4 grid min-w-0 gap-x-10 sm:grid-cols-12">
+              <div className="min-w-0 sm:col-span-7">
+                <Field label="Future receivables" unit="USD">
+                  <input value={receivables} onChange={(e) => setReceivables(e.target.value)} inputMode="decimal" placeholder="100000" className={MONEY_INPUT_CLASS} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-5">
+                <Field label="Avg. monthly revenue" unit="USD">
+                  <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-6">
+                <Field label="Monthly operating expenses" unit="USD">
+                  <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-6">
+                <Field label="Existing obligations" unit="USD">
+                  <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-6">
+                <Field label="Largest-customer share" unit="%">
+                  <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-6">
+                <Field label="Payment terms" unit="days">
+                  <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:col-span-6">
+                <Field label="Repayment period" unit="days" meta="Informational — not enforced onchain">
+                  <input value={periodDays} onChange={(e) => setPeriodDays(e.target.value)} inputMode="numeric" placeholder="90" className={`${INPUT_CLASS} tabular-nums`} />
+                </Field>
+              </div>
             </div>
             <div className="mt-2 min-w-0">
               <Field label="Supporting notes">
-                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={600} placeholder="Two anchor customers on quarterly billing…" className={INPUT_CLASS} />
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={600} placeholder="Two anchor customers on quarterly billing…" className={`${INPUT_CLASS} resize-y`} />
               </Field>
             </div>
           </section>
@@ -438,17 +546,21 @@ export default function CreateFinancingPage() {
             <div id="koby-create-financing">
               <StageHead index="03" name="Financing" />
             </div>
-            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
-              <Field label="Requested liquidity" unit="USD">
-                <input value={requested} onChange={(e) => setRequested(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
-              </Field>
-              <Field
-                label="Proposed repayment obligation"
-                unit="USD"
-                meta={obligationRatio !== null ? `${obligationRatio.toFixed(2)}% of requested liquidity` : undefined}
-              >
-                <input value={obligation} onChange={(e) => setObligation(e.target.value)} inputMode="decimal" placeholder="75000" className={MONEY_INPUT_CLASS} />
-              </Field>
+            <div className="mt-4 grid min-w-0 gap-x-10 sm:grid-cols-2">
+              <div className="min-w-0 sm:pr-8">
+                <Field label="Requested liquidity" unit="USD">
+                  <input value={requested} onChange={(e) => setRequested(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
+                </Field>
+              </div>
+              <div className="min-w-0 sm:border-l sm:border-koby-border sm:pl-8">
+                <Field
+                  label="Repayment obligation"
+                  unit="USD"
+                  meta={obligationRatio !== null ? `${obligationRatio.toFixed(2)}% of requested liquidity` : undefined}
+                >
+                  <input value={obligation} onChange={(e) => setObligation(e.target.value)} inputMode="decimal" placeholder="75000" className={MONEY_INPUT_CLASS} />
+                </Field>
+              </div>
             </div>
           </section>
 
@@ -456,20 +568,23 @@ export default function CreateFinancingPage() {
             <div id="koby-create-assess">
               <StageHead name="Assessment" />
             </div>
-            <p className="mt-4 font-mono text-[11px] tracking-[0.14em] text-koby-text-muted uppercase">
-              Offchain assessment · No transaction
-            </p>
-            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"} size="lg" className="w-full sm:w-auto">
-                {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow →"}
-              </Button>
-              <button
-                type="button"
-                onClick={fillDemo}
-                className="font-mono text-xs text-koby-text-muted underline underline-offset-4 transition-colors hover:text-koby-text"
-              >
-                Fill example values
-              </button>
+            <div className="mt-6 max-w-2xl">
+              <p className="text-sm font-semibold text-koby-text">Offchain analysis</p>
+              <p className="mt-1 text-sm leading-relaxed text-koby-text-secondary">
+                Your inputs will be evaluated before any blockchain transaction.
+              </p>
+              <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
+                <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"} size="lg" className="w-full sm:w-auto">
+                  {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow →"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={fillDemo}
+                  className="font-mono text-xs text-koby-text-muted underline underline-offset-4 transition-colors hover:text-koby-text"
+                >
+                  Fill example values
+                </button>
+              </div>
             </div>
           </section>
 
@@ -545,7 +660,28 @@ export default function CreateFinancingPage() {
               message="NEXT_PUBLIC_CONTRACT_ADDRESS is empty, so no transaction can be prepared. Deploy the contract to Monad Testnet (script/Deploy.s.sol), set the address, and retry. The analysis above is preserved — nothing was submitted onchain."
             />
           ) : status !== "connected" ? (
-            <EmptyState title="Connect a wallet to continue" description="Creating the financing position requires your signature on Monad Testnet. Browsing and analysis need no wallet." />
+            <div className="border-t-2 border-koby-text pt-6">
+              <p className="font-mono text-[11px] font-medium tracking-[0.2em] text-koby-text-muted uppercase">
+                Ready to settle
+              </p>
+              <p className="mt-3 max-w-[40ch] text-2xl font-bold tracking-tight text-koby-text">
+                Connect a wallet to continue on Monad.
+              </p>
+              <p className="mt-2 max-w-[58ch] text-sm leading-relaxed text-koby-text-secondary">
+                Only the settlement signature needs your wallet — nothing moves until you sign the terms above.
+              </p>
+              <div className="mt-5">
+                <Button
+                  onClick={() => void connectForSettlement()}
+                  disabled={connectBusy || status === "connecting"}
+                  loading={connectBusy || status === "connecting"}
+                  size="lg"
+                  className="w-full sm:w-auto"
+                >
+                  {connectBusy || status === "connecting" ? "Connecting…" : "Connect wallet →"}
+                </Button>
+              </div>
+            </div>
           ) : !isCorrectNetwork ? (
             <ErrorState title="Wrong network" message={`Your wallet is not on ${monadConfig.chainName}. Switch networks to create this financing position. No transaction was prepared.`} />
           ) : (
