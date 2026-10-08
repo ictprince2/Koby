@@ -141,9 +141,13 @@ export default function DocsMonadPage() {
           </tbody>
         </DocTable>
         <DocParagraph>
-          The deployed contract address is environment configuration (
-          <Code>NEXT_PUBLIC_CONTRACT_ADDRESS</Code>), never hardcoded. Until it is set, financing
-          actions show an honest not-deployed state instead of attempting transactions.
+          The contract is deployed on Monad Testnet at{" "}
+          <Code>0x7dee1dd04e2a9541202eb37ede56a7395a1dc93a</Code> (chain ID 10143;
+          deploy records in <Code>broadcast/Deploy.s.sol/10143/</Code>, verifiable on the
+          explorer). The address is environment configuration (
+          <Code>NEXT_PUBLIC_CONTRACT_ADDRESS</Code>), never hardcoded: until it is set,
+          financing actions show an honest not-deployed state instead of attempting
+          transactions. This is a testnet deployment — not mainnet, not production.
         </DocParagraph>
       </DocSection>
 

@@ -48,15 +48,30 @@ frontend only reads and displays it. Network defaults live in
 `web/lib/monad.ts` (MONAD.md-verified, env-overridable); the deployed
 contract address arrives via `NEXT_PUBLIC_CONTRACT_ADDRESS`.
 
+Testnet deployment (verified, not claimed): `KobyFinancing` at
+`0x7dee1dd04e2a9541202eb37ede56a7395a1dc93a` on chain `10143`, bound at
+construction to testnet USDC
+`0x534b2f3A21130d7a60830c2Df862319e593943A3` (6 decimals). Deploy
+transaction
+`0xc1bae0e83ef176bfba18b6a032b6cccc5dc6b90d7d9888b84e9bba60ad77c5f0`
+(receipt status success). Evidence: `broadcast/Deploy.s.sol/10143/`
+run records, cross-checked against a live RPC receipt and an onchain
+`USDC()` read. This is a **testnet** deployment for development and demo
+use — not a mainnet or production deployment, and no production hosting
+configuration is verified in this repository.
+
 ## AI
 
-`POST /api/analyze` is the server-side assessment boundary. It serves live
-Kimi analysis (Moonshot, OpenAI-compatible, key server-side only) when the
-provider is configured and returns valid output, and otherwise the
-documented, versioned deterministic methodology (`koby-deterministic-v0`),
-labeled **Demo AI Assessment / Simulated**. Both paths return the same
-`RiskAssessment` core inside a structured financing-analysis envelope with a
-mandatory human/financier-review flag; output is schema/range/content-validated
+`POST /api/analyze` is the server-side assessment boundary. It attempts
+live providers in order — OpenRouter first, then Kimi (Moonshot,
+OpenAI-compatible, keys server-side only) — and serves whichever returns
+fully valid output; otherwise it serves the documented, versioned
+deterministic methodology (`koby-deterministic-v0`), labeled **Demo AI
+Assessment / Simulated**. Which source serves a given request depends on
+configured keys and validation, and every response is labeled
+accordingly. Both paths return the same `RiskAssessment` core inside a
+structured financing-analysis envelope with a mandatory
+human/financier-review flag; output is schema/range/content-validated
 before use.
 
 ## Contracts
@@ -94,13 +109,19 @@ confirmations (see `docs/HACKATHON.md` Section 4).
 
 ## Known limitations (MVP)
 
-- No contract deployed yet → onchain routes show an honest not-deployed
-  state until `NEXT_PUBLIC_CONTRACT_ADDRESS` is set.
+- Contract is deployed on Monad Testnet
+  (`0x7dee1dd04e2a9541202eb37ede56a7395a1dc93a`, see above); the address
+  is env configuration, never hardcoded, so onchain routes still show an
+  honest not-deployed state when `NEXT_PUBLIC_CONTRACT_ADDRESS` is unset.
 - History reads contract logs directly (pre-ENVIO); RPC range limits
   surface as "unavailable", never fabricated events.
-- Wallet layer is provider-agnostic (`hooks/useWallet`): injected EIP-1193
-  wallets plus implemented Privy onboarding (`Providers` + `PrivyWalletBridge`,
-  gated by `NEXT_PUBLIC_PRIVY_APP_ID`). Injected wallets keep working when
-  Privy is unconfigured.
-- Nansen/ENVIO/Kimi-live are not yet wired; analysis fallback is labeled.
+- Wallet layer is provider-agnostic (`hooks/useWallet`): Privy onboarding
+  via `Providers`-gated `PrivyProvider` plus an injected EIP-1193 fallback
+  (`lib/wallets.ts` discovery). Injected wallets keep working when Privy is
+  unconfigured. Wallet connection is required only at settlement;
+  input, analysis, and opportunity review work without a wallet.
+- Nansen is not integrated (assessments use submitted data only) and ENVIO
+  is not integrated (history reads contract logs directly over RPC). Live
+  AI paths (OpenRouter, then Kimi) are implemented in code with labeled
+  deterministic fallback — see "AI" above.
 - No `Active`/`Defaulted`/`Cancelled` states, no admin controls by design.

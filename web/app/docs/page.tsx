@@ -162,10 +162,12 @@ export default function DocsOverviewPage() {
             </tr>
             <tr>
               <DocTd>Testnet deployment</DocTd>
-              <DocTd>Configured at deploy time</DocTd>
+              <DocTd>Live on Monad Testnet</DocTd>
               <DocTd>
-                Address comes from <Code>NEXT_PUBLIC_CONTRACT_ADDRESS</Code>; the app shows an
-                honest not-deployed state until it is set
+                <Code>KobyFinancing</Code> at{" "}
+                <Code>0x7dee1dd04e2a9541202eb37ede56a7395a1dc93a</Code> (chain 10143);
+                address arrives via <Code>NEXT_PUBLIC_CONTRACT_ADDRESS</Code>, never
+                hardcoded — unset means an honest not-deployed state
               </DocTd>
             </tr>
             <tr>

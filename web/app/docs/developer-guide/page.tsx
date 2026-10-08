@@ -170,13 +170,17 @@ export default function DocsDeveloperGuidePage() {
 
       <DocSection id="deployment" title="Configuring a deployment safely">
         <DocParagraph>
-          Deploy the contract to Monad Testnet only after re-verifying the network values and token
-          address, compiling, and passing <Code>forge test</Code>. Record the deployment address,
-          verify the contract on the block explorer where supported, then set{" "}
-          <Code>NEXT_PUBLIC_CONTRACT_ADDRESS</Code> in the hosting environment — never in a
-          committed file. Exercise create, fund, repay, and completion against the live testnet
-          deployment, confirm each emitted event, and check that displayed state matches direct
-          contract reads before demonstrating anything.
+          A deployment already exists on Monad Testnet (see “Monad Integration” for the
+          address and verification); run records live in{" "}
+          <Code>broadcast/Deploy.s.sol/10143/</Code>. A fresh deployment is only needed
+          for a new environment or contract change: re-verify the network values and token
+          address first, then compile, pass <Code>forge test</Code>, and broadcast with{" "}
+          <Code>script/Deploy.s.sol</Code> — noting that redeploying produces a new contract
+          address that must be set as <Code>NEXT_PUBLIC_CONTRACT_ADDRESS</Code> in the
+          hosting environment, never in a committed file. Exercise create, fund, repay, and
+          completion against the live testnet deployment, confirm each emitted event, and
+          check that displayed state matches direct contract reads before demonstrating
+          anything.
         </DocParagraph>
       </DocSection>
 
