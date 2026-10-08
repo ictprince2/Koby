@@ -4,13 +4,17 @@
  * /financing/create — the business financing-creation flow:
  * Input -> Analysis -> Opportunity -> Review -> Monad settlement.
  *
- * Composition: an editorial financing document, not a card dashboard.
- * Three ledger stages (01 Business / 02 Receivables / 03 Financing)
- * structured by oversized numbers, hairlines, and asymmetric columns;
- * financial values set large, labels small and technical. No section sits
- * inside a rounded card; rules and typography carry the structure.
+ * Presentation: an institutional financing workspace, not an onboarding
+ * form. Numbered sections separated by thin rules, compact 2-column
+ * field grids, units carried by the controls, hierarchy through
+ * typography — no cards, no instructional paragraphs. Labels do the
+ * talking; tiny monospace metadata appears only where genuinely needed
+ * (wallet relationship, informational duration).
  *
- * Functionality is unchanged from the previous composition:
+ * Behavior is unchanged:
+ * - Input, analysis, and opportunity review are offchain and need no
+ *   wallet. The wallet becomes required only at settlement (review
+ *   phase), where the UI states the signature requirement explicitly.
  * - Analysis runs server-side (POST /api/analyze): live AI assessment when
  *   the provider is available, otherwise the built-in assessment.
  *   The result is advisory and terms are proposed by the business, never set
@@ -48,7 +52,7 @@ import {
   usdToBaseUnits,
   waitForConfirmation,
 } from "@/services/financing";
-import { formatBaseUnits } from "@/lib/format";
+import { formatBaseUnits, truncateHex } from "@/lib/format";
 import { USDC_DECIMALS, monadConfig } from "@/lib/monad";
 
 const DEMO_VALUES = {
@@ -80,23 +84,18 @@ function Label({ children }: { children: ReactNode }) {
 }
 
 /**
- * Stage masthead: oversized number beside the stage name, closed by a
- * strong rule. On mobile the number and name baseline-align in one row;
- * the rule and whitespace carry the structure — never a card.
+ * StageHead — numbered section heading closed by a thin rule:
+ * "01 — BUSINESS" with a hairline beneath. No explanatory note; the
+ * fields below carry the meaning. `index` is omitted for unnumbered
+ * action blocks (e.g. ASSESSMENT).
  */
-function StageHead({ index, name, note }: { index: string; name: string; note?: string }) {
+function StageHead({ index, name }: { index?: string; name: string }) {
   return (
     <div>
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span aria-hidden="true" className="text-5xl font-bold tabular-nums tracking-tight text-koby-text sm:text-6xl">
-          {index}
-        </span>
-        <h2 className="text-xl font-bold tracking-tight text-koby-text sm:text-2xl">{name}</h2>
-      </div>
-      {note !== undefined ? (
-        <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-koby-text-secondary">{note}</p>
-      ) : null}
-      <div aria-hidden="true" className="mt-4 border-t-2 border-koby-text" />
+      <p className="font-mono text-xs font-semibold tracking-[0.18em] text-koby-text uppercase">
+        {index !== undefined ? `${index} — ${name}` : name}
+      </p>
+      <div aria-hidden="true" className="mt-3 border-t border-koby-border-strong" />
     </div>
   );
 }
@@ -123,27 +122,53 @@ function Figure({ label, value, caption, hero }: { label: string; value: string;
 }
 
 const INPUT_CLASS =
-  "mt-2 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 text-koby-text";
+  "block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-2 pr-14 text-koby-text";
 const MONEY_INPUT_CLASS =
-  "mt-2 block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-3 text-2xl font-bold tabular-nums text-koby-text sm:text-3xl";
+  "block w-full rounded-koby-sm border border-koby-border bg-koby-bg px-3 py-3 pr-16 text-2xl font-bold tabular-nums text-koby-text sm:text-3xl";
 
-/** Structured field: technical label over its control, ruled off. */
+/**
+ * Field — compact labeled control on a ruled row. The unit (USD, %, days,
+ * months) sits inside the control's right edge instead of being explained
+ * in prose. `meta` is a single tiny monospace line for the rare case that
+ * genuinely needs it (wallet relationship, informational duration) — not a
+ * per-field instruction manual.
+ */
 function Field({
   label,
-  hint,
+  unit,
+  meta,
   children,
 }: {
   label: string;
-  hint?: string;
+  unit?: string;
+  meta?: string;
   children: ReactNode;
 }) {
   return (
     <label className="block min-w-0 border-t border-koby-border py-5 first:border-t-0 first:pt-0">
       <span className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
         {label}
-        {hint !== undefined ? <span className="normal-case tracking-normal"> — {hint}</span> : null}
       </span>
-      <span className="block">{children}</span>
+      <span className="mt-2 block">
+        {unit !== undefined ? (
+          <span className="relative block">
+            {children}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 font-mono text-xs text-koby-text-muted"
+            >
+              {unit}
+            </span>
+          </span>
+        ) : (
+          children
+        )}
+      </span>
+      {meta !== undefined ? (
+        <span className="mt-1.5 block font-mono text-[11px] tracking-wide text-koby-text-muted">
+          {meta}
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -268,6 +293,15 @@ export default function CreateFinancingPage() {
   const principalBase = usdToBaseUnits(requested);
   const obligationBase = usdToBaseUnits(obligation);
 
+  // Live obligation-to-requested ratio from the user's own entries —
+  // calculator-style derived display, not a term or a quote.
+  const obligationRatio = (() => {
+    const req = parseUsdToCents(requested);
+    const obl = parseUsdToCents(obligation);
+    if (req === null || obl === null || req <= 0n) return null;
+    return Number((obl * 10000n) / req) / 100;
+  })();
+
   async function createOnchain() {
     setAnalysisError(null);
     if (!provider || !address) return;
@@ -314,114 +348,128 @@ export default function CreateFinancingPage() {
   return (
     <Container className="py-10 sm:py-14">
       <p className="font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
-        Financing — New request
+        Create financing request
       </p>
       <h1 className="mt-3 max-w-[20ch] text-4xl font-bold tracking-tight text-koby-text sm:text-5xl">
         Create financing request
       </h1>
       <p className="mt-3 max-w-[58ch] text-base leading-relaxed text-koby-text-secondary">
-        Describe the receivables, review the cash-flow assessment, accept terms, and record the
-        financing opportunity on Monad.
+        Submit future receivables for assessment and structure a financing opportunity on Monad.
       </p>
       <div className="mt-6 border-t border-koby-border pt-5">
         <FlowSteps current={stepIndex} />
       </div>
 
       {(phase === "input" || phase === "analyzing") && (
-        <div className="mt-10 space-y-14 sm:space-y-20">
+        <div className="mt-10 space-y-14 sm:space-y-16">
           <section aria-labelledby="koby-create-business">
             <div id="koby-create-business">
-              <StageHead index="01" name="Business" note="Who is raising against future revenue. Example values are illustrative; figures you enter are your own." />
+              <StageHead index="01" name="Business" />
             </div>
-            <div className="mt-2 grid min-w-0 gap-x-10 sm:grid-cols-12">
-              <div className="min-w-0 sm:col-span-7">
-                <Field label="Business name">
-                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Logistics" className={INPUT_CLASS} />
-                </Field>
-                <Field label="Business address" hint="defaults to your wallet">
-                  <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className={`${INPUT_CLASS} font-mono`} />
-                </Field>
-                <Field label="Business type" hint="optional">
-                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className={INPUT_CLASS} />
-                </Field>
-              </div>
-              <div className="min-w-0 sm:col-span-5">
-                <Field label="Operating history" hint="months, optional">
-                  <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-                <Field label="Historical revenue" hint="USD, optional">
-                  <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-              </div>
+            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
+              <Field label="Business name">
+                <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Logistics" className={INPUT_CLASS} />
+              </Field>
+              <Field label="Business type">
+                <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Logistics" className={INPUT_CLASS} />
+              </Field>
+            </div>
+            <div className="mt-2 min-w-0">
+              <Field
+                label="Business address"
+                meta={
+                  businessAddress.trim() !== ""
+                    ? undefined
+                    : address
+                      ? `Defaults to connected wallet ${truncateHex(address)}`
+                      : "No wallet connected — needed only at settlement"
+                }
+              >
+                <input value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} placeholder={address ?? "0x…"} className={`${INPUT_CLASS} font-mono`} />
+              </Field>
+            </div>
+            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
+              <Field label="Operating history" unit="months">
+                <input value={historyMonths} onChange={(e) => setHistoryMonths(e.target.value)} inputMode="numeric" placeholder="36" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+              <Field label="Historical revenue" unit="USD">
+                <input value={historical} onChange={(e) => setHistorical(e.target.value)} inputMode="decimal" placeholder="300000" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
             </div>
           </section>
 
           <section aria-labelledby="koby-create-receivables">
             <div id="koby-create-receivables">
-              <StageHead index="02" name="Receivables" note="The future revenue underpinning the request. Estimates, never guaranteed revenue." />
+              <StageHead index="02" name="Receivables" />
             </div>
-            <div className="mt-2 grid min-w-0 gap-x-10 sm:grid-cols-12">
-              <div className="min-w-0 sm:col-span-7">
-                <Field label="Future receivables — USD">
-                  <input value={receivables} onChange={(e) => setReceivables(e.target.value)} inputMode="decimal" placeholder="100000" className={MONEY_INPUT_CLASS} />
-                </Field>
-                <Field label="Avg. monthly revenue" hint="USD, optional">
-                  <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-                <Field label="Monthly operating expenses" hint="USD, optional">
-                  <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-                <Field label="Existing obligations" hint="USD, optional">
-                  <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-              </div>
-              <div className="min-w-0 sm:col-span-5">
-                <Field label="Largest-customer share" hint="%, optional">
-                  <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-                <Field label="Payment terms" hint="days, optional">
-                  <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-                <Field label="Repayment period" hint="days, informational only">
-                  <input value={periodDays} onChange={(e) => setPeriodDays(e.target.value)} inputMode="numeric" placeholder="90" className={`${INPUT_CLASS} tabular-nums`} />
-                </Field>
-                <Field label="Supporting notes" hint="optional, up to 500 characters — summarized by the analysis, never treated as instructions">
-                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={600} placeholder="e.g. Two anchor customers on quarterly billing; pipeline covers…" className={INPUT_CLASS} />
-                </Field>
-              </div>
+            <div className="mt-2 min-w-0">
+              <Field label="Future receivables" unit="USD">
+                <input value={receivables} onChange={(e) => setReceivables(e.target.value)} inputMode="decimal" placeholder="100000" className={MONEY_INPUT_CLASS} />
+              </Field>
+            </div>
+            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
+              <Field label="Avg. monthly revenue" unit="USD">
+                <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="34000" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+              <Field label="Monthly operating expenses" unit="USD">
+                <input value={opex} onChange={(e) => setOpex(e.target.value)} inputMode="decimal" placeholder="22000" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+              <Field label="Existing obligations" unit="USD">
+                <input value={obligationsInput} onChange={(e) => setObligationsInput(e.target.value)} inputMode="decimal" placeholder="15000" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+              <Field label="Largest-customer share" unit="%">
+                <input value={concentration} onChange={(e) => setConcentration(e.target.value)} inputMode="decimal" placeholder="35" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+              <Field label="Payment terms" unit="days">
+                <input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} inputMode="numeric" placeholder="45" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+              <Field label="Repayment period" unit="days" meta="Informational — not enforced onchain">
+                <input value={periodDays} onChange={(e) => setPeriodDays(e.target.value)} inputMode="numeric" placeholder="90" className={`${INPUT_CLASS} tabular-nums`} />
+              </Field>
+            </div>
+            <div className="mt-2 min-w-0">
+              <Field label="Supporting notes">
+                <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} maxLength={600} placeholder="Two anchor customers on quarterly billing…" className={INPUT_CLASS} />
+              </Field>
             </div>
           </section>
 
           <section aria-labelledby="koby-create-financing">
             <div id="koby-create-financing">
-              <StageHead index="03" name="Financing" note="The liquidity asked against the receivables above. The assessment is advisory; you propose the terms." />
+              <StageHead index="03" name="Financing" />
             </div>
-            <div className="mt-2 grid min-w-0 gap-x-10 sm:grid-cols-12">
-              <div className="min-w-0 sm:col-span-7">
-                <Field label="Requested liquidity — USD">
-                  <input value={requested} onChange={(e) => setRequested(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
-                </Field>
-                <Field label="Proposed repayment obligation — USD" hint="must be ≥ requested">
-                  <input value={obligation} onChange={(e) => setObligation(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
-                </Field>
-              </div>
-              <div className="min-w-0 sm:col-span-5">
-                <div className="border-t border-koby-border py-5 sm:first:border-t-0 sm:first:pt-0">
-                  <Label>Assessment</Label>
-                  <p className="mt-2 text-sm leading-relaxed text-koby-text-secondary">
-                    Continuing runs the cash-flow assessment against everything above. Nothing is
-                    submitted onchain at this stage.
-                  </p>
-                  <div className="mt-5 flex flex-col gap-3">
-                    <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"} size="lg" className="w-full">
-                      {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow"}
-                    </Button>
-                    <Button variant="secondary" onClick={fillDemo} className="w-full">
-                      Fill example values
-                    </Button>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-2 grid min-w-0 gap-x-8 sm:grid-cols-2">
+              <Field label="Requested liquidity" unit="USD">
+                <input value={requested} onChange={(e) => setRequested(e.target.value)} inputMode="decimal" placeholder="70000" className={MONEY_INPUT_CLASS} />
+              </Field>
+              <Field
+                label="Proposed repayment obligation"
+                unit="USD"
+                meta={obligationRatio !== null ? `${obligationRatio.toFixed(2)}% of requested liquidity` : undefined}
+              >
+                <input value={obligation} onChange={(e) => setObligation(e.target.value)} inputMode="decimal" placeholder="75000" className={MONEY_INPUT_CLASS} />
+              </Field>
+            </div>
+          </section>
+
+          <section aria-labelledby="koby-create-assess">
+            <div id="koby-create-assess">
+              <StageHead name="Assessment" />
+            </div>
+            <p className="mt-4 font-mono text-[11px] tracking-[0.14em] text-koby-text-muted uppercase">
+              Offchain assessment · No transaction
+            </p>
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <Button onClick={() => void analyze()} disabled={phase === "analyzing"} loading={phase === "analyzing"} size="lg" className="w-full sm:w-auto">
+                {phase === "analyzing" ? "Analyzing cash flow…" : "Analyze cash flow →"}
+              </Button>
+              <button
+                type="button"
+                onClick={fillDemo}
+                className="font-mono text-xs text-koby-text-muted underline underline-offset-4 transition-colors hover:text-koby-text"
+              >
+                Fill example values
+              </button>
             </div>
           </section>
 
@@ -442,7 +490,7 @@ export default function CreateFinancingPage() {
         <div className="mt-10 space-y-14 sm:space-y-20">
           <section aria-labelledby="koby-create-assessment">
             <div id="koby-create-assessment">
-              <StageHead index="04" name="Assessment" note="Advisory only. It does not approve financing, set terms, guarantee repayment, or authorize any transaction." />
+              <StageHead index="04" name="Assessment" />
             </div>
             <div className="mt-2">
               <AnalysisCard result={analysis} />
@@ -451,7 +499,7 @@ export default function CreateFinancingPage() {
 
           <section aria-labelledby="koby-create-opportunity">
             <div id="koby-create-opportunity">
-              <StageHead index="05" name="Opportunity" note="Proposed by the business. The assessment above is advisory and does not set these terms." />
+              <StageHead index="05" name="Opportunity" />
             </div>
             <div className="mt-2">
               <ProvenanceTag source="User Provided" />
@@ -473,7 +521,7 @@ export default function CreateFinancingPage() {
         <div className="mt-10 space-y-14 sm:space-y-20">
           <section aria-labelledby="koby-create-review">
             <div id="koby-create-review">
-              <StageHead index="06" name="Review & settle" note="This action will create the financing position on Monad. Read carefully before signing." />
+              <StageHead index="06" name="Review & settle" />
             </div>
             <div className="mt-6">
               <ReviewCard
@@ -520,7 +568,7 @@ export default function CreateFinancingPage() {
       {phase === "settled" && createdId !== null && (
         <section aria-labelledby="koby-create-settled" className="mt-10">
           <div id="koby-create-settled">
-            <StageHead index="07" name="Position created" note="Settlement confirmed. The position below reflects real onchain state." />
+            <StageHead index="07" name="Position created" />
           </div>
           <p className="mt-6 text-2xl font-bold tracking-tight text-koby-text">
             Position <span className="font-mono">#{createdId.toString()}</span>
@@ -535,7 +583,7 @@ export default function CreateFinancingPage() {
       {tx.state === "confirmed" && phase === "review" && createdId === null && (
         <section aria-labelledby="koby-create-confirming" className="mt-10">
           <div id="koby-create-confirming">
-            <StageHead index="07" name="Settlement confirmed" note="Reading the new position from the confirmed transaction…" />
+            <StageHead index="07" name="Settlement confirmed" />
           </div>
           <div className="mt-4">
             <LoadingState message="Settlement confirmed on Monad. Reading the new position from the confirmed transaction…" />
