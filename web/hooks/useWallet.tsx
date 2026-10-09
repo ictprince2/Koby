@@ -221,6 +221,33 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
   const [creating, setCreating] = useState(false);
   const [injecting, setInjecting] = useState(false);
   const [preferInjected, setPreferInjected] = useState(false);
+  /**
+   * Watchdog for Privy SDK initialization. `ready` is normally true within
+   * a second; if it never arrives (invalid App ID, blocked SDK requests,
+   * offline), the wallet button would otherwise sit on a disabled
+   * "Connecting…" forever with no explanation. After the grace period the
+   * UI reports the stall honestly and re-enables the injected fallback —
+   * no state is faked, and a late `ready` clears the stall.
+   */
+  const [privyStalled, setPrivyStalled] = useState(false);
+  useEffect(() => {
+    if (!ready) {
+      const timer = window.setTimeout(() => {
+        setPrivyStalled(true);
+        setError((prev) =>
+          prev ??
+          "Privy wallet service isn't responding. Check your connection and try again, or use an installed wallet below.",
+        );
+      }, 12000);
+      return () => window.clearTimeout(timer);
+    }
+    // A late `ready` clears the stall. Reset lands in a timeout callback,
+    // never synchronously in the effect body (see useSyncedChain above).
+    const timer = window.setTimeout(() => {
+      setPrivyStalled(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
   const [entry, setEntry] = useState<{
     walletAddress: string;
     label: string;
@@ -388,7 +415,11 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
   }, [active, setChainId]);
 
   const status: WalletStatus =
-    !ready || creating || injecting ? "connecting" : address && active ? "connected" : "disconnected";
+    (!ready && !privyStalled) || creating || injecting
+      ? "connecting"
+      : address && active
+        ? "connected"
+        : "disconnected";
 
   const value = useMemo<WalletContextValue>(
     () => ({
