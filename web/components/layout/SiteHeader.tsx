@@ -3,14 +3,13 @@ import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 import { SiteNav, MobileNavMenu } from "@/components/layout/SiteNav";
 import { WalletButton } from "@/components/wallet/WalletButton";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Button } from "@/components/ui/Button";
 
 /**
  * SiteHeader — sticky structural chrome (DESIGN.md Sections 10/20).
  * Logo + wordmark left, desktop nav beside it, actions right:
- * create action (sm and up), theme toggle, Privy connect control,
- * mobile menu control at the top-right.
+ * create action (sm and up), Privy connect control, mobile menu
+ * control at the top-right.
  *
  * Mobile is a single non-wrapping row: every control is shrink-0 with
  * nowrap labels, the brand takes the remaining space (min-w-0/flex-1),
@@ -64,7 +63,6 @@ export function SiteHeader() {
                 Create financing request
               </Button>
             </span>
-            <ThemeToggle className="shrink-0" />
             <WalletButton />
             <MobileNavMenu />
           </div>

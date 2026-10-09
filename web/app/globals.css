@@ -1,30 +1,30 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /*
- * KOBY DESIGN TOKENS — Phase 1 foundation.
- * Dual-mode (light/dark) with hierarchy parity. Restrained institutional
- * palette: no neon, no gradients, no glassmorphism.
- * Source: docs/DESIGN.md Sections 7–11.
+ * KOBY DESIGN TOKENS — permanent light theme.
+ * Restrained institutional palette: no neon, no gradients, no
+ * glassmorphism. There is no dark mode and no theme switching: the
+ * tokens below are the single source of truth for every route.
  */
 
 :root {
-  /* Structural — light */
-  --koby-bg: #f6f6f4;
-  --koby-bg-secondary: #ededea;
-  --koby-surface: #ffffff;
-  --koby-border: #e0e0d9;
-  --koby-border-strong: #c9c9bd;
-  --koby-text: #17181a;
-  --koby-text-secondary: #555b62;
-  --koby-text-muted: #7b8189;
+  color-scheme: light;
 
-  /* Semantic — light */
-  --koby-accent: #0e4a3c;
-  --koby-accent-hover: #0a382d;
+  /* Structural — light (permanent) */
+  --koby-bg: #f7f7f2;
+  --koby-bg-secondary: #edeee7;
+  --koby-surface: #ffffff;
+  --koby-border: #e2e5de;
+  --koby-border-strong: #c4c9be;
+  --koby-text: #191c19;
+  --koby-text-secondary: #70766f;
+  --koby-text-muted: #8e948d;
+
+  /* Semantic — light (permanent) */
+  --koby-accent: #39845b;
+  --koby-accent-hover: #2d6a48;
   --koby-accent-text: #ffffff;
-  --koby-accent-subtle: #e2eee7;
+  --koby-accent-subtle: #e2eee6;
   --koby-success: #177245;
   --koby-success-subtle: #e0f0e6;
   --koby-warning: #8a5a00;
@@ -48,10 +48,8 @@
   --koby-demo-text: #5f5747;
 
   /*
-   * Footer closing section — deliberate deep charcoal in both modes so the
-   * footer reads as distinct from the page. Light mode gets the full
-   * charcoal treatment; dark mode (already near-black page) steps slightly
-   * lighter for subtle contrast. No gradients, no glassmorphism.
+   * Footer closing section — deliberate deep charcoal so the
+   * footer reads as distinct from the page. No gradients, no glassmorphism.
    */
   --koby-footer-bg: #1a1d1b;
   --koby-footer-border: #2e332f;
@@ -72,49 +70,6 @@
 
   --koby-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --koby-font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
-}
-
-.dark {
-  /* Structural — dark */
-  --koby-bg: #0f1110;
-  --koby-bg-secondary: #161817;
-  --koby-surface: #1b1e1c;
-  --koby-border: #2b2f2c;
-  --koby-border-strong: #3c423d;
-  --koby-text: #eceee9;
-  --koby-text-secondary: #b4b8b0;
-  --koby-text-muted: #8c928a;
-
-  /* Semantic — dark */
-  --koby-accent: #63bd8f;
-  --koby-accent-hover: #7ccfa2;
-  --koby-accent-text: #0a2118;
-  --koby-accent-subtle: #152b22;
-  --koby-success: #4cc38a;
-  --koby-success-subtle: #14291e;
-  --koby-warning: #e0b45c;
-  --koby-warning-subtle: #2e2611;
-  --koby-error: #f0887f;
-  --koby-error-subtle: #331716;
-  --koby-info: #8fb4d9;
-  --koby-info-subtle: #1a2733;
-
-  --koby-pending: #d9b64a;
-  --koby-pending-subtle: #2c2510;
-
-  --koby-ai: #9fb3c8;
-  --koby-ai-subtle: #1d2630;
-
-  --koby-demo-bg: #211e17;
-  --koby-demo-border: #6b6455;
-  --koby-demo-text: #c9bfa9;
-
-  /* Footer: one step lighter than the near-black page for subtle contrast. */
-  --koby-footer-bg: #151716;
-  --koby-footer-border: #2b2f2c;
-  --koby-footer-text: #eceee9;
-  --koby-footer-text-secondary: #b4b8b0;
-  --koby-footer-text-muted: #8c928a;
 }
 
 @theme inline {

@@ -2,8 +2,8 @@ import { cn } from "@/lib/cn";
 
 /**
  * Relative deepening tones for strata bands. Static strings so the
- * Tailwind compiler can see them. Theme-agnostic: translucent ink over
- * whatever surface sits beneath, so light and dark modes both deepen.
+ * Tailwind compiler can see them. Translucent ink over whatever surface
+ * sits beneath, so every band deepens consistently.
  */
 const BAND_TONES = [
   "bg-koby-text/[0.02]",
