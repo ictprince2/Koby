@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { truncateHex } from "@/lib/format";
 import { monadConfig } from "@/lib/monad";
+import { discoverInjectedWallets, type DiscoveredWallet } from "@/lib/wallets";
 import { toHexChainId, useWallet } from "@/hooks/useWallet";
 
 /**
@@ -10,11 +11,15 @@ import { toHexChainId, useWallet } from "@/hooks/useWallet";
  * Section 5). Privy is the primary connection authority: the main button
  * opens the real Privy login modal (wallet selection, embedded wallets, and
  * multi-wallet support all live inside Privy), shows the connected address,
- * and disconnects by ending the session. A thin injected-wallet fallback
- * (compact icon button, first detected wallet only — never a chooser
- * dialog) covers installed wallets when Privy is unavailable or the user
- * prefers it. Never fakes a connection, an address, or a wallet. On the
- * wrong network it blocks transaction actions and offers a switch.
+ * and disconnects by ending the session.
+ *
+ * The thin injected-wallet fallback is an explicit secondary choice: a
+ * compact control opens a menu listing the actually discovered installed
+ * wallets, and only the wallet the user clicks is ever connected. Nothing
+ * is auto-picked by discovery order, and the fallback is never triggered
+ * merely because Privy is loading, stalled, or unconfigured. Never fakes a
+ * connection, an address, or a wallet. On the wrong network it blocks
+ * transaction actions and offers a switch.
  */
 export function WalletButton() {
   const {
@@ -33,17 +38,53 @@ export function WalletButton() {
   } = useWallet();
   const [busy, setBusy] = useState(false);
   const [injectedBusy, setInjectedBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuWallets, setMenuWallets] = useState<DiscoveredWallet[]>([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const menuRootRef = useRef<HTMLDivElement>(null);
+
+  async function refreshMenuWallets() {
+    setMenuLoading(true);
+    try {
+      setMenuWallets(await discoverInjectedWallets());
+    } finally {
+      setMenuLoading(false);
+    }
+  }
+
+  function openMenu() {
+    setMenuOpen(true);
+    void refreshMenuWallets();
+  }
+
+  // Close the selection menu on outside tap.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      if (menuRootRef.current && !menuRootRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
+
+  // Close the selection menu on Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen ]);
 
   async function onConnectClick() {
     if (busy || injectedBusy || status === "connecting") return;
-    // Without Privy, the primary button is the injected fallback itself.
+    // Without Privy, the primary button opens the explicit installed-wallet
+    // menu instead of auto-connecting whatever was discovered first.
     if (!privyAvailable) {
-      setInjectedBusy(true);
-      try {
-        await connectInjected();
-      } finally {
-        setInjectedBusy(false);
-      }
+      openMenu();
       return;
     }
     setBusy(true);
@@ -54,11 +95,19 @@ export function WalletButton() {
     }
   }
 
-  async function onInjectedClick() {
+  function onInjectedButtonClick() {
     if (busy || injectedBusy || status === "connecting") return;
+    setMenuOpen((value) => {
+      if (!value) void refreshMenuWallets();
+      return !value;
+    });
+  }
+
+  async function onSelectWallet(walletId: string) {
+    if (injectedBusy) return;
     setInjectedBusy(true);
     try {
-      await connectInjected();
+      await connectInjected(walletId);
     } finally {
       setInjectedBusy(false);
     }
@@ -110,7 +159,7 @@ export function WalletButton() {
   const showBusy = busy || injectedBusy || status === "connecting";
 
   return (
-    <div className="relative flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
+    <div ref={menuRootRef} className="relative flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
       <button
         type="button"
         onClick={() => void onConnectClick()}
@@ -118,7 +167,7 @@ export function WalletButton() {
         title={
           privyAvailable
             ? "Connect with Privy (email or wallet)"
-            : `Connect with ${injectedLabel ?? "injected wallet"}`
+            : "Privy isn't configured — choose an installed wallet"
         }
         className="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-koby-sm bg-koby-accent px-3 text-sm font-semibold whitespace-nowrap text-koby-accent-text transition-colors hover:bg-koby-accent-hover disabled:opacity-50 sm:px-4"
       >
@@ -138,19 +187,21 @@ export function WalletButton() {
         )}
       </button>
       {/*
-        Thin injected fallback: one compact control for the first detected
-        installed wallet. Rendered only when Privy is the primary path and
-        an injected wallet actually exists — never a chooser dialog, never
-        a second primary button. Fixed 44px size keeps the mobile header a
-        single row.
+        Explicit secondary choice: a compact control opening a menu of the
+        actually discovered installed wallets. Rendered only when an
+        injected wallet exists — never a chooser dialog that picks for the
+        user, never an automatic connection. Fixed 44px size keeps the
+        mobile header a single row.
       */}
       {privyAvailable && injectedLabel ? (
         <button
           type="button"
-          onClick={() => void onInjectedClick()}
+          onClick={onInjectedButtonClick}
           disabled={showBusy}
-          title={`Connect with ${injectedLabel} (installed wallet)`}
-          aria-label={`Connect with ${injectedLabel} (installed wallet)`}
+          aria-expanded={menuOpen}
+          aria-controls="koby-injected-wallet-menu"
+          aria-label="Choose an installed wallet"
+          title="Choose an installed wallet (explicit selection — nothing connects automatically)"
           className="inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-koby-sm border border-koby-border text-koby-text-secondary transition-colors hover:text-koby-text disabled:opacity-50"
         >
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -159,6 +210,46 @@ export function WalletButton() {
             <circle cx="13" cy="11.5" r="1" fill="currentColor" stroke="none" />
           </svg>
         </button>
+      ) : null}
+      {menuOpen ? (
+        <div
+          id="koby-injected-wallet-menu"
+          role="menu"
+          aria-label="Choose an installed wallet"
+          className="absolute top-[calc(100%+8px)] right-0 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-koby-md border border-koby-border bg-koby-surface p-2 shadow-lg"
+        >
+          <p className="px-3 pt-2 font-mono text-[11px] font-medium tracking-[0.14em] text-koby-text-muted uppercase">
+            {privyAvailable ? "Installed wallets" : "Privy unavailable"}
+          </p>
+          <p className="px-3 pt-1 pb-2 text-xs leading-relaxed text-koby-text-secondary">
+            {privyAvailable
+              ? "Connect one explicitly — nothing connects automatically."
+              : "Privy onboarding isn't configured in this build. Choose an installed wallet to continue."}
+          </p>
+          {menuLoading ? (
+            <p className="px-3 py-3 text-sm text-koby-text-secondary">Looking for installed wallets…</p>
+          ) : menuWallets.length === 0 ? (
+            <p className="px-3 py-3 text-sm text-koby-text-secondary">
+              No installed wallets detected in this browser.
+            </p>
+          ) : (
+            <ul>
+              {menuWallets.map((wallet) => (
+                <li key={wallet.id}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => void onSelectWallet(wallet.id)}
+                    disabled={injectedBusy}
+                    className="flex min-h-[44px] w-full items-center rounded-koby-sm px-3 text-left text-sm font-medium text-koby-text-secondary transition-colors hover:bg-koby-bg-secondary hover:text-koby-text disabled:opacity-50"
+                  >
+                    {wallet.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : null}
       {error ? (
         <p

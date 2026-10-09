@@ -250,10 +250,10 @@ export default function CreateFinancingPage() {
     status,
     privyAvailable,
     connectPrivy,
-    connectInjected,
   } = useWallet();
   const { tx, run, reset } = useTx();
   const [connectBusy, setConnectBusy] = useState(false);
+  const [settlementNotice, setSettlementNotice] = useState<string | null>(null);
 
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
@@ -423,13 +423,21 @@ export default function CreateFinancingPage() {
 
   // Settlement-time connect only: input, analysis, and opportunity review
   // never ask for a wallet. Uses the existing wallet authority unchanged —
-  // Privy primary, injected fallback — surfaced here as an explicit step.
+  // Privy primary, explicit installed-wallet menu via the header control —
+  // surfaced here as an explicit step. Nothing auto-picks an injected
+  // wallet by discovery order.
   async function connectForSettlement() {
     if (connectBusy || status === "connecting") return;
+    setSettlementNotice(null);
+    if (!privyAvailable) {
+      setSettlementNotice(
+        "Privy onboarding isn't configured in this build. Use the Connect wallet button in the header and choose an installed wallet explicitly.",
+      );
+      return;
+    }
     setConnectBusy(true);
     try {
-      if (privyAvailable) await connectPrivy();
-      else await connectInjected();
+      await connectPrivy();
     } finally {
       setConnectBusy(false);
     }
@@ -681,6 +689,11 @@ export default function CreateFinancingPage() {
                   {connectBusy || status === "connecting" ? "Connecting…" : "Connect wallet →"}
                 </Button>
               </div>
+              {settlementNotice ? (
+                <p role="status" className="mt-3 max-w-[58ch] text-sm leading-relaxed text-koby-text-secondary">
+                  {settlementNotice}
+                </p>
+              ) : null}
             </div>
           ) : !isCorrectNetwork ? (
             <ErrorState title="Wrong network" message={`Your wallet is not on ${monadConfig.chainName}. Switch networks to create this financing position. No transaction was prepared.`} />

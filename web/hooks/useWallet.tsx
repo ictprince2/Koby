@@ -69,10 +69,11 @@ type WalletContextValue = {
    */
   connectPrivy: () => Promise<void>;
   /**
-   * User-initiated injected fallback: discovers installed wallets and
-   * connects the first one found. Secondary to Privy in every respect.
+   * User-initiated injected fallback: connects the explicitly selected
+   * installed wallet (matched by discovery id). Secondary to Privy in
+   * every respect; never auto-picks a wallet by discovery order.
    */
-  connectInjected: () => Promise<void>;
+  connectInjected: (walletId: string) => Promise<void>;
   /** End the session (Privy logout where applicable) and clear local state. */
   disconnect: () => void;
   switchToMonad: () => Promise<void>;
@@ -236,7 +237,7 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
         setPrivyStalled(true);
         setError((prev) =>
           prev ??
-          "Privy wallet service isn't responding. Check your connection and try again, or use an installed wallet below.",
+          "Privy wallet service isn't responding. Check your connection and try again, or use the installed-wallet option.",
         );
       }, 12000);
       return () => window.clearTimeout(timer);
@@ -365,13 +366,26 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
     }
   }, [authenticated, entry, login, createWallet]);
 
-  const connectInjected = useCallback(async () => {
+  /**
+   * Explicit secondary choice: connect the installed wallet the user
+   * selected (matched by discovery id against a fresh discovery round, so
+   * a stale menu entry can never connect the wrong wallet). Nothing here
+   * runs without that explicit selection — in particular, no wallet is
+   * ever picked by discovery order merely because Privy is loading,
+   * stalled, or unconfigured.
+   */
+  const connectInjected = useCallback(async (walletId: string) => {
     setError(null);
     setInjecting(true);
     try {
-      const found = await firstInjected();
+      const options = await discoverInjectedWallets();
+      const found = options.find((w) => w.id === walletId) ?? null;
       if (!found) {
-        setError("No injected wallet found in this browser. Install a wallet (e.g. MetaMask) or continue with Privy.");
+        if (options.length === 0) {
+          setError("No injected wallet found in this browser. Install a wallet (e.g. MetaMask) or continue with Privy.");
+        } else {
+          setError("The selected wallet is no longer available. Choose an installed wallet again.");
+        }
         return;
       }
       setInjected(found);
@@ -466,13 +480,18 @@ function InjectedOnlyWallet({ children }: { children: ReactNode }) {
   const activeProvider = chosen && injected ? injected.provider : null;
   const { address, chainId, setAddress, setChainId } = useSyncedChain(activeProvider);
 
-  const connectInjected = useCallback(async () => {
+  const connectInjected = useCallback(async (walletId: string) => {
     setError(null);
     setBusy(true);
     try {
-      const found = await firstInjected();
+      const options = await discoverInjectedWallets();
+      const found = options.find((w) => w.id === walletId) ?? null;
       if (!found) {
-        setError("No injected wallet found in this browser. Install a wallet (e.g. MetaMask) to continue.");
+        if (options.length === 0) {
+          setError("No injected wallet found in this browser. Install a wallet (e.g. MetaMask) to continue.");
+        } else {
+          setError("The selected wallet is no longer available. Choose an installed wallet again.");
+        }
         return;
       }
       setInjected(found);
