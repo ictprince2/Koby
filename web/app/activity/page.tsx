@@ -28,9 +28,12 @@ export default function ActivityPage() {
   }, [configured]);
 
   return (
-    <Container className="py-10">
-      <h1 className="text-3xl font-bold tracking-tight text-koby-text">Onchain activity</h1>
-      <p className="mt-2 max-w-2xl text-sm text-koby-text-secondary">
+    <Container className="py-10 sm:py-14">
+      <p className="font-mono text-[11px] font-medium tracking-[0.2em] text-koby-text-muted uppercase">
+        Onchain / Activity
+      </p>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-koby-text sm:text-4xl">Onchain activity</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-koby-text-secondary sm:text-base">
         Financing creation, funding, repayment, and completion events with transaction references.
       </p>
       <div className="mt-6">

@@ -54,7 +54,6 @@ export function AnalysisSection() {
             <Reveal>
               <div id="koby-analysis-heading">
                 <SectionHeading
-                  eyebrow="AI analysis"
                   title="Analysis that explains itself"
                   description="AI reads the cash-flow picture and reports what it found, with reasons and a stated confidence. It advises; the business and the financier decide, and the contract enforces."
                 />

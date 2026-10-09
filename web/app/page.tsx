@@ -4,25 +4,29 @@ import { DemoSection } from "@/components/landing/DemoSection";
 import { FaqSection } from "@/components/landing/FaqSection";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LandingHero } from "@/components/landing/LandingHero";
-import { LifecycleSection } from "@/components/landing/LifecycleSection";
 import { OpportunityPreview } from "@/components/landing/OpportunityPreview";
 import { ProblemSection } from "@/components/landing/ProblemSection";
 import { RepaymentSection } from "@/components/landing/RepaymentSection";
 import { SettlementSection } from "@/components/landing/SettlementSection";
 import { StrataDivider } from "@/components/landing/StrataDivider";
-import { TechnicalSection } from "@/components/landing/TechnicalSection";
 import { TrustSection } from "@/components/landing/TrustSection";
-import { WalkthroughSection } from "@/components/landing/WalkthroughSection";
 
 /**
- * Landing route (/) — the full product experience.
+ * Landing route (/) — the focused product story.
  *
- * Section order: hero/category definition, the liquidity problem, the
- * condensed explanation plus the full lifecycle, the example financing
- * opportunity, the product walkthrough, AI analysis, Monad settlement,
- * programmable repayment, trust/transparency, technical infrastructure,
- * the example flow, FAQ/clarification, and the final CTA. Dividers
- * separate genuine movements only: into settlement, into the example flow.
+ * Section order: hero with the signature liquidity figure, the liquidity
+ * problem, the condensed three-move explanation, the example financing
+ * opportunity, AI analysis, settlement, programmable repayment,
+ * trust/transparency, the example flow, FAQ/clarification, and the final
+ * CTA. Dividers separate genuine movements only: into settlement, into the
+ * example flow.
+ *
+ * Removed in the visual redesign: the full seven-stage lifecycle ledger,
+ * the nine-step product walkthrough, and the eight-row infrastructure
+ * ledger. Those stories now live where they belong: the condensed
+ * explanation above, the settlement and repayment sections below, and the
+ * technical documentation at /docs. The page stays focused on problem,
+ * outcome, and path into the product.
  *
  * Honesty rules enforced here, not just documented:
  * - The $100,000 / $70,000 figures are the canonical fictional example,
@@ -39,15 +43,12 @@ export default function Home() {
       <LandingHero />
       <ProblemSection />
       <HowItWorks />
-      <LifecycleSection />
       <OpportunityPreview />
-      <WalkthroughSection />
       <AnalysisSection />
       <StrataDivider note="settlement layer" />
       <SettlementSection />
       <RepaymentSection />
       <TrustSection />
-      <TechnicalSection />
       <StrataDivider note="example flow" />
       <DemoSection />
       <FaqSection />

@@ -30,7 +30,6 @@ export function TrustSection() {
         <Reveal>
           <div id="koby-trust-heading">
             <SectionHeading
-              eyebrow="Trust"
               title="Honest about what is real"
               description="Confirmed onchain facts and labeled examples never look alike."
             />

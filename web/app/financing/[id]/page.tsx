@@ -205,9 +205,14 @@ export default function FinancingDetailPage({ params }: { params: Promise<{ id: 
   const canRepay = position !== null && (position.status === "Funded" || position.status === "Repaying");
 
   return (
-    <Container className="py-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight text-koby-text">Financing position #{idParam}</h1>
+    <Container className="py-10 sm:py-14">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[11px] font-medium tracking-[0.2em] text-koby-text-muted uppercase">
+            Financing / Position
+          </p>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight text-koby-text sm:text-4xl">Financing position #{idParam}</h1>
+        </div>
         <Button variant="secondary" size="sm" onClick={() => refreshNow()}>Refresh from chain</Button>
       </div>
 

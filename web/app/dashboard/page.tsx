@@ -55,9 +55,12 @@ export default function DashboardPage() {
   const outstanding = active.reduce((sum, p) => sum + p.outstanding, 0n);
 
   return (
-    <Container className="py-10">
-      <h1 className="text-3xl font-bold tracking-tight text-koby-text">Business dashboard</h1>
-      <p className="mt-2 max-w-2xl text-sm text-koby-text-secondary">
+    <Container className="py-10 sm:py-14">
+      <p className="font-mono text-[11px] font-medium tracking-[0.2em] text-koby-text-muted uppercase">
+        Business / Overview
+      </p>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-koby-text sm:text-4xl">Business dashboard</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-koby-text-secondary sm:text-base">
         Active financing, amounts repaid, outstanding balances, and onchain activity for your connected wallet.
       </p>
       <div className="mt-6 space-y-6">

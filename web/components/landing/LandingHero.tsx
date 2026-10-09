@@ -2,17 +2,16 @@ import { Container } from "@/components/layout/Container";
 import { Button } from "@/components/ui/Button";
 import { Reveal } from "@/components/landing/Reveal";
 import { StrataField } from "@/components/landing/StrataField";
-import { TechnicalLabel } from "@/components/landing/TechnicalLabel";
+import { LiquidityFigure } from "@/components/landing/LiquidityFigure";
 
 /**
  * LandingHero — full-bleed strata environment, asymmetric editorial grid.
  *
  * Category-first: the eyebrow names the product category (onchain
  * receivables financing) before the H1 states the promise. Copy sits in a
- * wide left column; the right holds a settlement column: diffuse estimate
- * ($100,000) settling through bands into full-contrast financing ($70,000)
- * on the seam, crossed by the settlement fault with repayment ticks below.
- * Both figures are presented as an illustrative example; nothing here is
+ * wide left column; the right holds the signature liquidity figure: future
+ * estimate settling through the seam into present financing, with programmed
+ * paydown below. Both figures are the illustrative example; nothing here is
  * onchain state.
  */
 export function LandingHero() {
@@ -51,57 +50,7 @@ export function LandingHero() {
           </Reveal>
 
           <Reveal delay={140} className="min-w-0 lg:col-span-4 lg:col-start-9">
-            <div
-              aria-label="Settlement column: fictional receivables settling into financing, crossed by settlement"
-              className="koby-frame relative overflow-hidden rounded-koby-lg border border-koby-border-strong bg-koby-surface"
-            >
-              <StrataField bands={6} fault="vertical" />
-              <div className="relative flex h-[400px] flex-col justify-between p-6 sm:h-[460px] sm:p-6">
-                <div>
-                  <p className="text-xs text-koby-text-muted">Illustrative example</p>
-                  <div className="mt-3">
-                    <TechnicalLabel>Future receivables - estimate</TechnicalLabel>
-                  </div>
-                  <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-koby-text-secondary sm:text-4xl">
-                    $100,000
-                  </p>
-                  <p className="mt-1 text-xs text-koby-text-muted">
-                    Expected revenue described by the business. Never guaranteed.
-                  </p>
-                </div>
-
-                <div className="border-t border-koby-border pt-5">
-                  <TechnicalLabel>Financing</TechnicalLabel>
-                  <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-koby-text sm:text-5xl">
-                    $70,000
-                  </p>
-                  <p className="mt-1 text-xs text-koby-text-muted">
-                    Eligible amount proposed from the assessment, funded by a financier.
-                  </p>
-                </div>
-
-                <div className="border-t border-koby-border pt-5">
-                  {/*
-                    Wrap + smaller bars on mobile: at 320px the card content
-                    is ~230px and label + 3×32px bars sit exactly at the edge.
-                  */}
-                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                    <TechnicalLabel className="text-koby-accent">
-                      Monad settlement
-                    </TechnicalLabel>
-                    <span className="flex shrink-0 gap-1.5" aria-hidden="true">
-                      <span className="h-2 w-6 rounded-full bg-koby-accent sm:w-8" />
-                      <span className="h-2 w-6 rounded-full bg-koby-accent/50 sm:w-8" />
-                      <span className="h-2 w-6 rounded-full bg-koby-border-strong sm:w-8" />
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-koby-text-muted">
-                    Funding settles onchain. Repayment ticks validate against the
-                    outstanding balance until completion.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <LiquidityFigure />
           </Reveal>
         </div>
       </Container>

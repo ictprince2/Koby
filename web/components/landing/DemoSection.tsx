@@ -52,7 +52,6 @@ export function DemoSection() {
         <Reveal>
           <div id="koby-demo-heading">
             <SectionHeading
-              eyebrow="Example flow"
               title="From expected revenue to a completed position"
               description="A fictional business walks through each stage while settlement steps are recorded as contract state. Example steps and onchain steps are labeled so they are never confused."
             />

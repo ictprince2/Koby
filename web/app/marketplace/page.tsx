@@ -28,9 +28,12 @@ export default function MarketplacePage() {
   }, [configured]);
 
   return (
-    <Container className="py-10">
-      <h1 className="text-3xl font-bold tracking-tight text-koby-text">Financing marketplace</h1>
-      <p className="mt-2 max-w-2xl text-sm text-koby-text-secondary">
+    <Container className="py-10 sm:py-14">
+      <p className="font-mono text-[11px] font-medium tracking-[0.2em] text-koby-text-muted uppercase">
+        Financier / Marketplace
+      </p>
+      <h1 className="mt-3 text-3xl font-bold tracking-tight text-koby-text sm:text-4xl">Financing marketplace</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-koby-text-secondary sm:text-base">
         Open financing opportunities — business, receivables, terms, and funding status.
         Browsing needs no wallet; funding happens on the position page.
       </p>

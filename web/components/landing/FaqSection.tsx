@@ -57,7 +57,6 @@ export function FaqSection() {
         <Reveal>
           <div id="koby-faq-heading">
             <SectionHeading
-              eyebrow="Clarification"
               title="What Koby is — and isn't"
               description="Eight questions first-time visitors actually ask, answered without hedging."
             />

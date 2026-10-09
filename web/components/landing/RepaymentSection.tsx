@@ -46,7 +46,6 @@ export function RepaymentSection() {
             <Reveal>
               <div id="koby-repayment-heading">
                 <SectionHeading
-                  eyebrow="Repayment"
                   title="Programmable, validated, visible"
                   description="Repayment is contract-validated tracking and execution: the terms are encoded onchain, every repayment is checked against what is owed, and the balance updates per transaction."
                 />
