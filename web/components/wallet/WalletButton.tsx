@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { truncateHex } from "@/lib/format";
-import { monadConfig } from "@/lib/monad";
 import { discoverInjectedWallets, type DiscoveredWallet } from "@/lib/wallets";
-import { toHexChainId, useWallet } from "@/hooks/useWallet";
+import { useWallet } from "@/hooks/useWallet";
 
 /**
  * WalletButton — the ONLY wallet connection UI in Koby (USER_FLOW.md
@@ -25,8 +24,6 @@ export function WalletButton() {
   const {
     status,
     address,
-    chainId,
-    isCorrectNetwork,
     error,
     walletLabel,
     injectedLabel,
@@ -34,7 +31,6 @@ export function WalletButton() {
     connectPrivy,
     connectInjected,
     disconnect,
-    switchToMonad,
   } = useWallet();
   const [busy, setBusy] = useState(false);
   const [injectedBusy, setInjectedBusy] = useState(false);
@@ -114,22 +110,15 @@ export function WalletButton() {
   }
 
   if (status === "connected" && address) {
+    // Compact single-row status only: the address pill plus disconnect.
+    // Wrong-network recovery lives in NetworkNotice (second header row), so
+    // this row can never crowd or clip the hamburger at 320–414px.
     return (
-      <div className="relative flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2">
-        {!isCorrectNetwork ? (
-          <button
-            type="button"
-            onClick={() => void switchToMonad()}
-            title={`Connected to chain ${chainId}. Switch to ${monadConfig.chainName} (${toHexChainId(monadConfig.chainId)}).`}
-            className="inline-flex min-h-[44px] max-w-full items-center rounded-koby-sm border border-koby-error bg-koby-error-subtle px-3 text-xs font-semibold text-koby-error"
-          >
-            <span className="truncate">Wrong network — switch to {monadConfig.chainName}</span>
-          </button>
-        ) : null}
+      <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
         <span
           title={walletLabel ? `Connected with ${walletLabel}: ${address}` : address}
           aria-label={`Connected wallet ${address}${walletLabel ? ` via ${walletLabel}` : ""}`}
-          className="inline-flex min-h-[44px] min-w-0 items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-2 font-mono text-sm whitespace-nowrap text-koby-text sm:px-3"
+          className="inline-flex min-h-[44px] min-w-0 max-w-[120px] items-center gap-2 rounded-koby-sm border border-koby-border bg-koby-surface px-2 font-mono text-[13px] whitespace-nowrap text-koby-text min-[375px]:max-w-[168px] sm:max-w-none sm:px-3 sm:text-sm"
         >
           <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-koby-success" />
           <span className="min-w-0 truncate">{truncateHex(address)}</span>
@@ -144,14 +133,6 @@ export function WalletButton() {
           <span aria-hidden="true" className="sm:hidden">✕</span>
           <span className="hidden sm:inline">Disconnect</span>
         </button>
-        {error ? (
-          <p
-            role="alert"
-            className="absolute top-12 right-0 z-10 w-64 max-w-[calc(100vw-2rem)] rounded-koby-md border border-koby-error bg-koby-surface p-3 text-xs text-koby-text-secondary"
-          >
-            {error}
-          </p>
-        ) : null}
       </div>
     );
   }

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 import { SiteNav, MobileNavMenu } from "@/components/layout/SiteNav";
+import { NetworkNotice } from "@/components/wallet/NetworkNotice";
 import { WalletButton } from "@/components/wallet/WalletButton";
 import { Button } from "@/components/ui/Button";
 
@@ -14,7 +15,10 @@ import { Button } from "@/components/ui/Button";
  * Mobile is a single non-wrapping row: every control is shrink-0 with
  * nowrap labels, the brand takes the remaining space (min-w-0/flex-1),
  * and the create action lives in the hamburger menu instead of the bar —
- * so nothing can push the header wider than the viewport.
+ * so nothing can push the header wider than the viewport. Wallet status
+ * stays compact (address pill + disconnect only); wrong-network recovery
+ * lives in NetworkNotice, a calm second row below the main bar, so it can
+ * never crowd the header controls or clip at 320–414px.
  * Bottom boundary is a segmented strata rule, not a plain border.
  */
 export function SiteHeader() {
@@ -68,6 +72,7 @@ export function SiteHeader() {
           </div>
         </div>
       </Container>
+      <NetworkNotice />
       <div aria-hidden="true" className="flex h-[2px]">
         <span className="flex-1 bg-koby-border" />
         <span className="w-24 bg-koby-border-strong sm:w-40" />

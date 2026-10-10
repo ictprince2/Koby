@@ -76,7 +76,13 @@ type WalletContextValue = {
   connectInjected: (walletId: string) => Promise<void>;
   /** End the session (Privy logout where applicable) and clear local state. */
   disconnect: () => void;
-  switchToMonad: () => Promise<void>;
+  /**
+   * Request a wallet switch to the configured Monad network, then re-read
+   * the actual chain. Resolves true only when the wallet is verified on
+   * the required chain; resolves false with `error` set (including manual
+   * instructions) on rejection, unsupported methods, or failed switches.
+   */
+  switchToMonad: () => Promise<boolean>;
   /** Raw provider for transaction submission. Null unless connected. */
   provider: Eip1193Provider | null;
 };
@@ -158,23 +164,43 @@ async function requestSwitchToMonad(
   provider: Eip1193Provider | null,
   onChainId: (id: number | null) => void,
   onError: (message: string | null) => void,
-): Promise<void> {
+): Promise<boolean> {
   if (!provider) {
-    onError("No wallet found in this browser.");
-    return;
+    onError("No wallet found in this browser. Install a wallet or continue with Privy.");
+    return false;
   }
+  const manualHint =
+    `Open your wallet and switch to ${monadConfig.chainName} ` +
+    `(chain ID ${monadConfig.chainId}, ${toHexChainId(monadConfig.chainId)}) manually, then return here.`;
   onError(null);
   const target = toHexChainId(monadConfig.chainId);
+  async function readAndVerify(): Promise<boolean> {
+    try {
+      const chainHex = (await provider!.request({ method: "eth_chainId" })) as string;
+      const next = hexToChainId(chainHex);
+      onChainId(next);
+      return next === monadConfig.chainId;
+    } catch {
+      return false;
+    }
+  }
   try {
     await provider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: target }],
     });
-    const chainHex = (await provider.request({ method: "eth_chainId" })) as string;
-    onChainId(hexToChainId(chainHex));
+    // Success is claimed only after re-reading the actual wallet chain.
+    if (await readAndVerify()) {
+      onError(null);
+      return true;
+    }
+    onError(`The wallet did not land on ${monadConfig.chainName}. ${manualHint}`);
+    return false;
   } catch (e) {
-    const err = e as { code?: number; message?: string };
-    if (err?.code === 4902) {
+    const err = e as { code?: number | string; message?: string };
+    const code = typeof err?.code === "number" ? err.code : null;
+    const message = err?.message ?? "";
+    if (code === 4902) {
       // Network unknown to the wallet: offer to add it.
       try {
         await provider.request({
@@ -189,16 +215,38 @@ async function requestSwitchToMonad(
             },
           ],
         });
-        const chainHex = (await provider.request({ method: "eth_chainId" })) as string;
-        onChainId(hexToChainId(chainHex));
-        return;
-      } catch {
-        onError("The network could not be added. Add Monad Testnet manually and try again.");
-        return;
+        if (await readAndVerify()) {
+          onError(null);
+          return true;
+        }
+        onError(`The network could not be added. ${manualHint}`);
+        return false;
+      } catch (addErr) {
+        const addError = addErr as { code?: number | string; message?: string };
+        const addCode = typeof addError?.code === "number" ? addError.code : null;
+        const addMessage = addError?.message ?? "";
+        if (addCode === 4001 || /rejected|denied|4001|exited/i.test(addMessage)) {
+          onError(`Adding ${monadConfig.chainName} was declined in your wallet. ${manualHint}`);
+          return false;
+        }
+        onError(`The network could not be added. ${manualHint}`);
+        return false;
       }
     }
-    if (/rejected|denied|4001/i.test(err?.message ?? "")) return;
-    onError("Could not switch networks. Switch your wallet manually and try again.");
+    // User declining the switch is a truthful wrong-network state with a
+    // manual path — never a silent no-op.
+    if (code === 4001 || /rejected|denied|user rejected|user denied|exited/i.test(message)) {
+      onError(`The switch request was declined in your wallet. ${manualHint}`);
+      return false;
+    }
+    // Wallets that do not implement the switch method (including some
+    // embedded/session wallets) cannot be switched programmatically.
+    if (code === -32601 || code === -32602 || /not support|not implemented|not available|method not found|does not exist/i.test(message)) {
+      onError(`This wallet does not support automatic network switching. ${manualHint}`);
+      return false;
+    }
+    onError(`Could not switch networks. ${manualHint}`);
+    return false;
   }
 }
 
@@ -437,7 +485,7 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
   }, [logout, setAddress, setChainId]);
 
   const switchToMonad = useCallback(async () => {
-    await requestSwitchToMonad(active?.provider ?? null, setChainId, setError);
+    return requestSwitchToMonad(active?.provider ?? null, setChainId, setError);
   }, [active, setChainId]);
 
   const status: WalletStatus =
@@ -526,7 +574,7 @@ function InjectedOnlyWallet({ children }: { children: ReactNode }) {
   }, [setAddress, setChainId]);
 
   const switchToMonad = useCallback(async () => {
-    await requestSwitchToMonad(activeProvider, setChainId, setError);
+    return requestSwitchToMonad(activeProvider, setChainId, setError);
   }, [activeProvider, setChainId]);
 
   const status: WalletStatus = busy ? "connecting" : address && activeProvider ? "connected" : "disconnected";
