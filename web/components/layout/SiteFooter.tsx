@@ -73,11 +73,11 @@ export function SiteFooter() {
               className="flex items-center gap-2"
             >
               <Image
-                src="/koby-logo.svg"
+                src="/koby-logo-symbol.jpg"
                 alt="Koby"
                 width={24}
                 height={24}
-                className="h-6 w-6 shrink-0"
+                className="h-6 w-6 shrink-0 rounded-[6px] border border-koby-footer-border bg-white object-cover"
               />
               <span className="text-lg font-bold tracking-tight whitespace-nowrap text-koby-footer-text">
                 Koby

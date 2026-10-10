@@ -324,13 +324,22 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Explicit choice wins; otherwise Privy first, injected as fallback.
+  // Explicit choice wins; otherwise the Privy-session wallet. The passively
+  // discovered injected wallet is NEVER activated on its own: activating it
+  // would silently reconnect on reload (eth_accounts succeeds without
+  // prompting for a previously authorized dapp) and silently switch wallets
+  // when the Privy session lapses. Discovery only feeds the explicit menu
+  // (injectedLabel); activation requires connectInjected().
+  //
+  // Session policy: a reload restores a genuine Privy session (entry) or
+  // shows Connect. Injected connections always require a fresh explicit
+  // choice and never survive a reload or a disconnect.
   // Memoized so downstream callbacks keep stable dependencies.
   const active = useMemo(
     () =>
       preferInjected && injected
         ? { label: injected.name, provider: injected.provider }
-        : (entry ?? (injected ? { label: injected.name, provider: injected.provider } : null)),
+        : entry,
     [preferInjected, injected, entry],
   );
 
@@ -415,7 +424,10 @@ function PrivyBackedWallet({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     // Ending the Privy session is programmatic. Clearing state nulls the
-    // context provider, so no financing transaction can proceed.
+    // context provider, so no financing transaction can proceed. The
+    // explicit injected choice is cleared too, and passive discovery alone
+    // never reactivates a wallet — a reload after disconnect stays
+    // disconnected until the user explicitly connects again.
     void logout().catch(() => {});
     setAddress(null);
     setChainId(null);

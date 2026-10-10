@@ -29,11 +29,11 @@ export function SiteHeader() {
               className="flex min-w-0 shrink-0 items-center gap-2"
             >
               <Image
-                src="/koby-logo.svg"
+                src="/koby-logo-symbol.jpg"
                 alt="Koby"
                 width={28}
                 height={28}
-                className="h-6 w-6 shrink-0 sm:h-7 sm:w-7"
+                className="h-6 w-6 shrink-0 rounded-[6px] border border-koby-border bg-white object-cover sm:h-7 sm:w-7"
                 priority
               />
               {/* Wordmark hidden on the narrowest phones (logo mark stays);
