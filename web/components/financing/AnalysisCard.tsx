@@ -43,15 +43,20 @@ function Label({ children }: { children: React.ReactNode }) {
 export function AnalysisCard({ result }: { result: AnalysisResponse }) {
   const { assessment, detail } = result;
   const live = result.source !== "deterministic-fallback";
+  // Provenance follows the API response, never assumed: only an explicit live
+  // source keeps the AI Analysis tag. Anything else — including an unexpected
+  // value — renders as Simulated so fallback output is never mistaken for a
+  // live provider assessment.
+  const provenance = result.provenance === "AI Analysis" && live ? "AI Analysis" : "Simulated";
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <Label>Analysis engine</Label>
         <span className="font-mono text-sm text-koby-text">{engineName(result)}</span>
-        <ProvenanceTag source="AI Analysis" />
+        <ProvenanceTag source={provenance} />
       </div>
       {!live ? (
-        <p className="mt-2 text-xs text-koby-text-muted">Live AI analysis currently unavailable.</p>
+        <p className="mt-2 text-xs text-koby-text-muted">{result.label} — simulated analysis. Live AI analysis currently unavailable.</p>
       ) : null}
       <p className="mt-2 max-w-[62ch] text-xs leading-relaxed text-koby-text-muted">
         This analysis is advisory only. It does not approve financing, set terms, guarantee

@@ -49,7 +49,10 @@ export default function DashboardPage() {
   const showingFor = loadedFor !== null && loadedFor.toLowerCase() === (address ?? "").toLowerCase();
   const visible = showingFor ? positions : null;
 
-  const active = visible?.filter((p) => p.status !== "Completed") ?? [];
+  // Active financing means capital actually deployed: only Funded and
+  // Repaying positions. Created positions are unfunded requests — listed
+  // below but excluded from financed-capital totals.
+  const active = visible?.filter((p) => p.status === "Funded" || p.status === "Repaying") ?? [];
   const financed = active.reduce((sum, p) => sum + p.principal, 0n);
   const repaid = (visible ?? []).reduce((sum, p) => sum + p.repaid, 0n);
   const outstanding = active.reduce((sum, p) => sum + p.outstanding, 0n);
